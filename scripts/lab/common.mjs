@@ -25,7 +25,8 @@ export async function requireJson(url, token, method = 'GET', body) {
   if (!result.response.ok) throw new Error(`${method} ${new URL(url).pathname}: HTTP ${result.response.status}: ${JSON.stringify(result.data)}`);
   return result.data;
 }
-export async function acquireToken(configuration, user = false) {
+export async function acquireToken(configuration, user = false, interactive = false) {
+  if (user && interactive) return acquireDeviceToken(configuration);
   const fields = user
     ? { client_id: configuration.test_client_id, scope: `api://${configuration.gateway_client_id}/access_as_user`, grant_type: 'password', username: configuration.test_user_upn, password: configuration.test_user_password }
     : { client_id: configuration.admin_client_id, client_secret: configuration.admin_client_secret, scope: `api://${configuration.api_client_id}/.default`, grant_type: 'client_credentials' };
@@ -35,4 +36,31 @@ export async function acquireToken(configuration, user = false) {
   const data = await response.json();
   if (!response.ok) throw new Error(`Entra sign-in failed: ${data.error}: ${data.error_description}. For MFA/existing users, supply LAB_USER_TOKEN from an interactive delegated login.`);
   return data.access_token;
+}
+
+async function acquireDeviceToken(configuration) {
+  const authority = `https://login.microsoftonline.com/${configuration.tenant_id}/oauth2/v2.0`;
+  const response = await fetch(`${authority}/devicecode`, {
+    method: 'POST', body: new URLSearchParams({ client_id: configuration.test_client_id, scope: `api://${configuration.gateway_client_id}/access_as_user` }),
+    signal: AbortSignal.timeout(30000),
+  });
+  const device = await response.json();
+  if (!response.ok) throw new Error(`Device sign-in failed: ${device.error}: ${device.error_description}`);
+  console.log(`Sign in as ${configuration.test_user_upn}. ${device.message}`);
+  console.log('Complete any required MFA enrollment. Retrieve the test password locally with: terraform -chdir=iac output -raw test_user_password');
+  const expiresAt = Date.now() + device.expires_in * 1000;
+  let interval = Math.max(device.interval || 5, 5) * 1000;
+  while (Date.now() < expiresAt) {
+    await sleep(interval);
+    const tokenResponse = await fetch(`${authority}/token`, {
+      method: 'POST', body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: configuration.test_client_id, device_code: device.device_code }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const token = await tokenResponse.json();
+    if (tokenResponse.ok) return token.access_token;
+    if (token.error === 'authorization_pending') continue;
+    if (token.error === 'slow_down') { interval += 5000; continue; }
+    throw new Error(`Device sign-in failed: ${token.error}: ${token.error_description}`);
+  }
+  throw new Error('Device sign-in expired. Run again with --device-code when ready.');
 }

@@ -6,12 +6,6 @@ import { acquireToken, jsonRequest, outputs, requireJson, root, sleep } from './
 const configuration = outputs();
 assert.ok(configuration.test_user_object_id, 'The lab test user has not been provisioned. Complete Entra administrator sign-in and apply Terraform before running the authenticated budget test.');
 const adminToken = process.env.LAB_ADMIN_TOKEN || await acquireToken(configuration);
-const userToken = process.env.LAB_USER_TOKEN || await acquireToken(configuration, true);
-const claims = JSON.parse(Buffer.from(userToken.split('.')[1], 'base64url').toString());
-assert.equal(claims.oid, configuration.test_user_object_id, 'Delegated token must belong to the configured budget test user');
-assert.equal(claims.tid, configuration.tenant_id);
-assert.ok(claims.scp?.split(' ').includes('access_as_user'), 'A delegated user token is required');
-const actualClientId = claims.azp || claims.appid;
 const engine = configuration.dashboard_url;
 const budgetBase = `${engine}/api/budgets/${configuration.tenant_id}`;
 const plans = await requireJson(`${engine}/api/plans`, adminToken);
@@ -21,7 +15,7 @@ if (!plan) plan = await requireJson(`${engine}/api/plans`, adminToken, 'POST', {
   enforceTokenQuota: false, tokensPerMinuteLimit: 1000000, requestsPerMinuteLimit: 120,
   allowOverbilling: false, costPerMillionTokens: 0, allowedDeployments: [configuration.deployment_name],
 });
-await requireJson(`${engine}/api/clients/${actualClientId}/${configuration.tenant_id}`, adminToken, 'PUT', { planId: plan.id });
+await requireJson(`${engine}/api/clients/${configuration.test_client_id}/${configuration.tenant_id}`, adminToken, 'PUT', { planId: plan.id });
 const price = process.env.LAB_PRICE_JSON ? JSON.parse(process.env.LAB_PRICE_JSON) : {
   deploymentId: configuration.deployment_name, version: 'gpt-4.1-mini/2025-04-14/GlobalStandard/2026-10-09',
   inputUsdPerMillion: 0.40, outputUsdPerMillion: 1.60, cachedInputUsdPerMillion: 0.10,
@@ -49,6 +43,20 @@ if (!config.assignments.some(assignment => assignment.policyId === policy.id && 
 }
 config.models = [...config.models.filter(model => model.deploymentId !== price.deploymentId), price];
 await requireJson(`${budgetBase}/configuration`, adminToken, 'PUT', config);
+if (process.argv.includes('--setup-only')) {
+  console.log(JSON.stringify({ dashboardUrl: `${engine}/budgets`, tenantId: configuration.tenant_id, testUser: configuration.test_user_upn, testUserObjectId: configuration.test_user_object_id, policyId: policy.id, allowanceUsd: 50, period: 'Monthly', inferencePerformed: false }, null, 2));
+  process.exit(0);
+}
+const userToken = process.env.LAB_USER_TOKEN || await acquireToken(configuration, true, process.argv.includes('--device-code'));
+const claims = JSON.parse(Buffer.from(userToken.split('.')[1], 'base64url').toString());
+assert.equal(claims.oid, configuration.test_user_object_id, 'Delegated token must belong to the configured budget test user');
+assert.equal(claims.tid, configuration.tenant_id);
+assert.ok(claims.scp?.split(' ').includes('access_as_user'), 'A delegated user token is required');
+const actualClientId = claims.azp || claims.appid;
+assert.ok(actualClientId, 'Delegated token must identify its client application');
+if (actualClientId !== configuration.test_client_id) {
+  await requireJson(`${engine}/api/clients/${actualClientId}/${configuration.tenant_id}`, adminToken, 'PUT', { planId: plan.id });
+}
 const before = await requireJson(`${budgetBase}/balances`, adminToken);
 const priorBalance = before.find(balance => balance.policyId === policy.id && balance.subject === `user:${configuration.test_user_object_id}` && new Date(balance.resetsAt) > new Date());
 const request = { messages: [{ role: 'user', content: 'Say hello and explain in one short sentence that this request uses my monthly AI budget.' }], max_completion_tokens: 100, stream: false };

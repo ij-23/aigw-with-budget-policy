@@ -12,6 +12,7 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and Cosmos/Redis 
 - The budget policy rewrites to the canonical OpenAI route to remove arbitrary APIM API suffixes.
 - Terraform stores credentials in Key Vault; lab scripts build through ACR, seed $50/month and verify real inference/settlement/blocking.
 - Entra user creation, consent and app-role grants require tenant privileges separately from Azure subscription permissions.
+- Lab setup can seed the $50 assignment before user authentication with `--setup-only`; `--device-code` supports interactive MFA without weakening tenant controls.
 
 ## Project structure
 

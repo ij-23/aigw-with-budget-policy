@@ -67,6 +67,10 @@ The script authenticates a real delegated test user, creates an access plan with
 
 The gateway app requests security group claims for group allowances. When group assignments exist, missing or overage group claims cause a denial; Graph-based group-overage resolution is not implemented. The E2E test uses a direct user assignment.
 
+You can configure the allowance before user sign-in with `node scripts/lab/e2e-budget.mjs --setup-only`. This creates the access plan, verified price book and $50/month user assignment without invoking a model.
+
+For MFA tenants, run `node scripts/lab/e2e-budget.mjs --device-code --verify-block`. Follow the displayed Microsoft device sign-in instructions using the configured test user, and complete MFA enrollment if required. Retrieve its password locally with `terraform -chdir=iac output -raw test_user_password`; do not share the password or tokens. The script keeps the delegated token in memory and proceeds with inference after sign-in. An expired device session requires rerunning the command.
+
 The dedicated account's password flow requires tenant policies to permit it. The script never disables MFA or Conditional Access. For an existing user or interactive login, set `LAB_USER_TOKEN` to a current delegated gateway token; do not commit it. `LAB_ADMIN_TOKEN` can supply an existing admin token.
 
 The report is `.lab/e2e-report.json`: request ID, provider tokens, actual USD cost, spending, remaining balance, reset time and block-test result. It excludes passwords and tokens.

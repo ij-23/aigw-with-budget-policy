@@ -1,5 +1,10 @@
 # Internal changelog
 
+## 2026-10-09 — Interactive budget lab verification
+
+- Added device-code sign-in for the delegated test user to support MFA enrollment.
+- Added setup-only mode to configure the $50/month policy and model prices before user authentication.
+
 Dated implementation history for maintainers.
 
 ### 2026-10-09 — Azure APIM budget test environment
