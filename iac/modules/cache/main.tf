@@ -8,6 +8,7 @@ resource "azurerm_container_app" "redis" {
   name                         = "${var.name_prefix}-redis"
   resource_group_name          = var.resource_group_name
   container_app_environment_id = var.environment_id
+  workload_profile_name        = var.workload_profile_name
   revision_mode                = "Single"
   tags                         = var.tags
   secret {

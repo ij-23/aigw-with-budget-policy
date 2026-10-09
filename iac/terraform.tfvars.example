@@ -56,3 +56,5 @@ location              = "eastus2"
 # create_key_vault_private_dns_zone = false
 # existing_key_vault_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
 # store_lab_credentials_in_key_vault = false # Defaults to true; requires ARM vaults/secrets/write.
+
+# container_workload_profile_name = null # Existing legacy Consumption-only environment.

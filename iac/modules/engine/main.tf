@@ -16,6 +16,7 @@ resource "azurerm_container_app" "engine" {
   name                         = "${var.name_prefix}-engine"
   resource_group_name          = var.resource_group_name
   container_app_environment_id = var.environment_id
+  workload_profile_name        = var.workload_profile_name
   revision_mode                = "Single"
   tags                         = var.tags
   identity {
@@ -50,7 +51,7 @@ resource "azurerm_container_app" "engine" {
           AzureAd__Instance                     = "https://login.microsoftonline.com/"
           AzureAd__TenantId                     = var.tenant_id
           AzureAd__ClientId                     = var.api_client_id
-          AzureAd__Audience                     = "api://${var.api_client_id}"
+          AzureAd__Audience                     = var.api_client_id
           AZURE_SUBSCRIPTION_ID                 = var.subscription_id
           AZURE_RESOURCE_GROUP                  = var.resource_group_name
           Foundry__SubscriptionIds__0           = var.subscription_id

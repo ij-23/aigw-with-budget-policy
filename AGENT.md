@@ -6,11 +6,11 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and Cosmos/Redis 
 
 - Networking: VNet-connected Consumption workload profiles; Cosmos SQL and Key Vault private endpoints and DNS with public access disabled. Terraform deploys vault secrets through ARM. Bring-existing flags cover VNet, subnets, private DNS and Cosmos connectivity.
 - Repository: `ij-23/aigw-with-budget-policy`; `iac/` is the authoritative modular test infrastructure.
-- Nine infrastructure modules provide create/use-existing flags; local state and credentials are ignored.
+- Ten infrastructure modules provide create/use-existing flags; local state and credentials are ignored.
 - New Redis is internal Container Apps cache; single-write-region Cosmos is the ledger authority.
 - The model-discovery ResourceIds option supports account-scoped Reader permissions.
 - The budget policy rewrites to the canonical OpenAI route to remove arbitrary APIM API suffixes.
-- Lab scripts build through ACR, store credentials in Key Vault, seed $50/month and verify real inference/settlement/blocking.
+- Terraform stores credentials in Key Vault; lab scripts build through ACR, seed $50/month and verify real inference/settlement/blocking.
 - Entra user creation, consent and app-role grants require tenant privileges separately from Azure subscription permissions.
 
 ## Project structure

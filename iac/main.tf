@@ -50,6 +50,7 @@ module "hosting" {
   log_analytics_id        = module.monitoring.workspace_id
 }
 module "cache" {
+  workload_profile_name      = var.container_workload_profile_name
   source                     = "./modules/cache"
   create                     = var.create_redis
   existing_connection_string = var.existing_redis_connection_string
@@ -120,6 +121,7 @@ module "gateway" {
   publisher_email     = var.publisher_email
 }
 module "engine" {
+  workload_profile_name          = var.container_workload_profile_name
   source                         = "./modules/engine"
   create                         = var.create_policy_engine
   existing_id                    = var.existing_policy_engine_id
@@ -256,5 +258,7 @@ resource "azapi_resource" "lab_secret" {
       attributes = { enabled = true }
     }
   }
-  response_export_values = []
+  # The ARM read response intentionally omits secret values; preserve their configured state.
+  ignore_missing_property = true
+  response_export_values  = []
 }

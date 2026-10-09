@@ -72,3 +72,8 @@ variable "foundry_id" {
   description = "Foundry account ARM ID, used for discovery with account-scoped Reader permission."
   type        = string
 }
+
+variable "workload_profile_name" {
+  description = "Workload profile name; null for legacy Consumption-only environments."
+  type        = string
+}

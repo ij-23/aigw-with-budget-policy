@@ -125,3 +125,6 @@ iac/*.auto.tfvars*
 **/obj/
 src/AIPolicyEngine.Api/wwwroot/
 .aspire/
+# Custom Terraform variable files can contain existing-resource credentials.
+**/*.tfvars
+**/*.tfvars.json

@@ -294,3 +294,9 @@ variable "store_lab_credentials_in_key_vault" {
   type        = bool
   default     = true
 }
+
+variable "container_workload_profile_name" {
+  description = "Container Apps workload profile name; null for an existing legacy Consumption-only environment."
+  type        = string
+  default     = "Consumption"
+}

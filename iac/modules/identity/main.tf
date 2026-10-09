@@ -2,8 +2,9 @@ data "azuread_client_config" "current" {}
 resource "random_uuid" "scope" { for_each = toset(["api", "gateway"]) }
 resource "random_uuid" "role" { for_each = toset(["AIPolicy.Admin", "AIPolicy.Apim", "AIPolicy.Export"]) }
 resource "azuread_application" "api" {
+  lifecycle { ignore_changes = [identifier_uris, single_page_application] }
   display_name = "${var.name_prefix} Policy Engine Dashboard"
-  owners       = [data.azuread_client_config.current.object_id]
+  owners       = distinct([data.azuread_client_config.current.object_id, var.admin_user_object_id])
   api {
     requested_access_token_version = 2
     oauth2_permission_scope {
@@ -33,9 +34,10 @@ resource "azuread_application_identifier_uri" "api" {
 }
 resource "azuread_service_principal" "api" { client_id = azuread_application.api.client_id }
 resource "azuread_application" "gateway" {
+  lifecycle { ignore_changes = [identifier_uris] }
   group_membership_claims = ["SecurityGroup"]
   display_name            = "${var.name_prefix} APIM AI Gateway"
-  owners                  = [data.azuread_client_config.current.object_id]
+  owners                  = distinct([data.azuread_client_config.current.object_id, var.admin_user_object_id])
   api {
     requested_access_token_version = 2
     oauth2_permission_scope {
@@ -55,7 +57,7 @@ resource "azuread_application_identifier_uri" "gateway" {
 resource "azuread_service_principal" "gateway" { client_id = azuread_application.gateway.client_id }
 resource "azuread_application" "test" {
   display_name                   = "${var.name_prefix} Delegated Test Client"
-  owners                         = [data.azuread_client_config.current.object_id]
+  owners                         = distinct([data.azuread_client_config.current.object_id, var.admin_user_object_id])
   fallback_public_client_enabled = true
   public_client { redirect_uris = ["http://localhost"] }
   required_resource_access {
@@ -79,7 +81,7 @@ resource "azuread_service_principal_delegated_permission_grant" "dashboard" {
 }
 resource "azuread_application" "admin" {
   display_name = "${var.name_prefix} Lab Bootstrap"
-  owners       = [data.azuread_client_config.current.object_id]
+  owners       = distinct([data.azuread_client_config.current.object_id, var.admin_user_object_id])
   required_resource_access {
     resource_app_id = azuread_application.api.client_id
     resource_access {

@@ -23,3 +23,8 @@ variable "existing_connection_string" {
   type        = string
   sensitive   = true
 }
+
+variable "workload_profile_name" {
+  description = "Workload profile name; null for legacy Consumption-only environments."
+  type        = string
+}
