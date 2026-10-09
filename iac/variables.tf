@@ -223,3 +223,54 @@ variable "existing_test_user_object_id" {
   type        = string
   default     = ""
 }
+
+variable "create_network" {
+  description = "Create VNet and Container Apps/private endpoint subnets; false uses existing network IDs."
+  type        = bool
+  default     = true
+}
+variable "network_address_space" {
+  description = "Lab VNet CIDR."
+  type        = string
+  default     = "10.82.0.0/16"
+}
+variable "apps_subnet_cidr" {
+  description = "Dedicated Container Apps subnet CIDR, /27 or larger."
+  type        = string
+  default     = "10.82.0.0/23"
+}
+variable "endpoints_subnet_cidr" {
+  description = "Private endpoint subnet CIDR."
+  type        = string
+  default     = "10.82.2.0/24"
+}
+variable "existing_vnet_id" {
+  description = "Existing VNet ARM ID when create_network=false."
+  type        = string
+  default     = ""
+}
+variable "existing_apps_subnet_id" {
+  description = "Existing dedicated Microsoft.App/environments delegated subnet when create_network=false."
+  type        = string
+  default     = ""
+}
+variable "existing_endpoints_subnet_id" {
+  description = "Existing private endpoint subnet when create_network=false."
+  type        = string
+  default     = ""
+}
+variable "create_cosmos_private_endpoint" {
+  description = "Create Cosmos private endpoint and DNS linkage; false requires existing reachable Cosmos networking."
+  type        = bool
+  default     = true
+}
+variable "create_cosmos_private_dns_zone" {
+  description = "Create privatelink.documents.azure.com; false uses existing_cosmos_private_dns_zone_id."
+  type        = bool
+  default     = true
+}
+variable "existing_cosmos_private_dns_zone_id" {
+  description = "Existing privatelink.documents.azure.com DNS zone ARM ID."
+  type        = string
+  default     = ""
+}

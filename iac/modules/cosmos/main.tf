@@ -5,6 +5,7 @@ resource "azurerm_cosmosdb_account" "lab" {
   resource_group_name              = var.resource_group_name
   offer_type                       = "Standard"
   kind                             = "GlobalDocumentDB"
+  public_network_access_enabled    = false
   local_authentication_enabled     = false
   multiple_write_locations_enabled = false
   consistency_policy { consistency_level = "Session" }
@@ -55,4 +56,40 @@ resource "azurerm_monitor_diagnostic_setting" "lab" {
   log_analytics_workspace_id = var.log_analytics_id
   enabled_log { category = "DataPlaneRequests" }
   enabled_metric { category = "Requests" }
+}
+resource "azurerm_private_dns_zone" "cosmos" {
+  count               = var.create_private_endpoint && var.create_private_dns_zone ? 1 : 0
+  name                = "privatelink.documents.azure.com"
+  resource_group_name = var.resource_group_name
+  tags                = var.tags
+}
+locals {
+  private_dns_zone_id = var.create_private_dns_zone ? try(azurerm_private_dns_zone.cosmos[0].id, "") : var.existing_private_dns_zone_id
+}
+resource "azurerm_private_dns_zone_virtual_network_link" "cosmos" {
+  count                 = var.create_private_endpoint ? 1 : 0
+  name                  = "${var.name_prefix}-cosmos"
+  resource_group_name   = split("/", local.private_dns_zone_id)[4]
+  private_dns_zone_name = basename(local.private_dns_zone_id)
+  virtual_network_id    = var.vnet_id
+  registration_enabled  = false
+  tags                  = var.tags
+}
+resource "azurerm_private_endpoint" "cosmos" {
+  count               = var.create_private_endpoint ? 1 : 0
+  name                = "${var.name_prefix}-cosmos-pe"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  subnet_id           = var.endpoint_subnet_id
+  tags                = var.tags
+  private_service_connection {
+    name                           = "cosmos-sql"
+    private_connection_resource_id = local.account.id
+    subresource_names              = ["Sql"]
+    is_manual_connection           = false
+  }
+  private_dns_zone_group {
+    name                 = "cosmos"
+    private_dns_zone_ids = [local.private_dns_zone_id]
+  }
 }

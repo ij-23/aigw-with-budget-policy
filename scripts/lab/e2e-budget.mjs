@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { acquireToken, jsonRequest, outputs, requireJson, root, sleep } from './common.mjs';
 
 const configuration = outputs();
+assert.ok(configuration.test_user_object_id, 'The lab test user has not been provisioned. Complete Entra administrator sign-in and apply Terraform before running the authenticated budget test.');
 const adminToken = process.env.LAB_ADMIN_TOKEN || await acquireToken(configuration);
 const userToken = process.env.LAB_USER_TOKEN || await acquireToken(configuration, true);
 const claims = JSON.parse(Buffer.from(userToken.split('.')[1], 'base64url').toString());

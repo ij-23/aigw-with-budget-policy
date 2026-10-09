@@ -22,7 +22,22 @@ module "monitoring" {
   existing_log_analytics_id = var.existing_log_analytics_id
   existing_app_insights_id  = var.existing_app_insights_id
 }
+module "networking" {
+  source                       = "./modules/networking"
+  create                       = var.create_network
+  name_prefix                  = var.name_prefix
+  resource_group_name          = local.resource_group_name
+  location                     = var.location
+  tags                         = var.tags
+  address_space                = var.network_address_space
+  apps_subnet_cidr             = var.apps_subnet_cidr
+  endpoints_subnet_cidr        = var.endpoints_subnet_cidr
+  existing_vnet_id             = var.existing_vnet_id
+  existing_apps_subnet_id      = var.existing_apps_subnet_id
+  existing_endpoints_subnet_id = var.existing_endpoints_subnet_id
+}
 module "hosting" {
+  apps_subnet_id          = module.networking.apps_subnet_id
   source                  = "./modules/hosting"
   create_registry         = var.create_registry
   create_environment      = var.create_container_environment
@@ -44,15 +59,20 @@ module "cache" {
   tags                       = var.tags
 }
 module "cosmos" {
-  source              = "./modules/cosmos"
-  create              = var.create_cosmos
-  create_schema       = coalesce(var.create_cosmos_schema, var.create_cosmos)
-  existing_id         = var.existing_cosmos_id
-  name_prefix         = var.name_prefix
-  resource_group_name = local.resource_group_name
-  location            = var.location
-  tags                = var.tags
-  log_analytics_id    = module.monitoring.workspace_id
+  create_private_endpoint      = var.create_cosmos_private_endpoint
+  create_private_dns_zone      = var.create_cosmos_private_dns_zone
+  existing_private_dns_zone_id = var.existing_cosmos_private_dns_zone_id
+  vnet_id                      = module.networking.vnet_id
+  endpoint_subnet_id           = module.networking.endpoints_subnet_id
+  source                       = "./modules/cosmos"
+  create                       = var.create_cosmos
+  create_schema                = coalesce(var.create_cosmos_schema, var.create_cosmos)
+  existing_id                  = var.existing_cosmos_id
+  name_prefix                  = var.name_prefix
+  resource_group_name          = local.resource_group_name
+  location                     = var.location
+  tags                         = var.tags
+  log_analytics_id             = module.monitoring.workspace_id
 }
 module "foundry" {
   source              = "./modules/foundry"

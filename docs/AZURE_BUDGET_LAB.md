@@ -38,9 +38,14 @@ All create flags default to `true`. Set a flag to `false` and supply its existin
 | `create_container_environment` | `existing_container_environment_id` |
 | `create_policy_engine` | `existing_policy_engine_id`, running updated code with matching configuration |
 | `create_key_vault` | `existing_key_vault_id`, with secret write permission for the deployer |
+| `create_network` | `existing_vnet_id`, `existing_apps_subnet_id` (delegated to `Microsoft.App/environments`), `existing_endpoints_subnet_id` |
+| `create_cosmos_private_dns_zone` | `existing_cosmos_private_dns_zone_id`; the lab creates its VNet link |
+| `create_cosmos_private_endpoint` | Existing Cosmos network connectivity and DNS reachable from the Container Apps VNet |
 | `create_monitoring` | `existing_log_analytics_id` and `existing_app_insights_id` |
 | `create_identity` | `existing_identity`, with API/gateway/test/admin app IDs, automation secret, scopes, roles and consent |
 | `create_test_user` | `existing_test_user_object_id`; supply a delegated gateway token |
+
+The default deployment uses a VNet-connected Consumption workload profile environment and a Cosmos SQL private endpoint with private DNS. Cosmos public access is disabled. An existing Container Apps environment must have network and DNS access to the supplied Cosmos endpoint. Changing the network type of an existing environment requires Terraform replacement.
 
 Redis is a small internal Container App used only as a cache, not a managed production Redis service. Budget spending is durable in Cosmos and survives Redis restarts. Use `create_redis=false` for an existing managed Redis service.
 
@@ -73,6 +78,8 @@ The report is `.lab/e2e-report.json`: request ID, provider tokens, actual USD co
 ## Costs, limits and cleanup
 
 The allowance covers model consumption according to the price book. APIM, Container Apps, Cosmos, ACR and monitoring have separate charges while running.
+
+Image builds upload a temporary source-only context, excluding credentials, Terraform state, dependencies and local build outputs. `node scripts/lab/build-lab.mjs --build-only` builds without deployment; `LAB_IMAGE` reuses an existing image from the configured registry.
 
 Initial support is non-streaming text Chat Completions, one response and an explicit output cap. Model account keys are disabled; APIM uses managed identity. Missing usage retains a reservation for verified reconciliation.
 

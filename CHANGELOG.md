@@ -8,6 +8,9 @@ Dated implementation history for maintainers.
 - Added ACR image deployment and an authenticated $50 monthly E2E budget test.
 - Added a deployment walkthrough and policy/usage viewing instructions.
 - Added explicitly scoped Foundry discovery and canonical backend URL rewriting.
+- Validated policy expressions against live APIM and fixed raw C# expression rendering.
+- Added private Cosmos networking for tenants enforcing disabled public access.
+- Reduced ACR upload context to application sources and added build-only/image reuse options.
 
 ### 2026-10-08 — USD budget enforcement
 

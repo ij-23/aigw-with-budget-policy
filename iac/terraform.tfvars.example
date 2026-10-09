@@ -42,3 +42,12 @@ location              = "eastus2"
 #   admin_client_id = "ADMIN-AUTOMATION-APP-ID"
 #   admin_client_secret = "SUPPLY-PRIVATELY"
 # }
+
+# Private Cosmos networking is created by default.
+# create_network = false
+# existing_vnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/..."
+# existing_apps_subnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/.../subnets/..."
+# existing_endpoints_subnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/.../subnets/..."
+# create_cosmos_private_dns_zone = false
+# existing_cosmos_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.documents.azure.com"
+# create_cosmos_private_endpoint = false # Only with an already reachable Cosmos endpoint.

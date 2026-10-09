@@ -34,3 +34,7 @@ variable "existing_environment_id" {
   description = "Existing Container Apps environment ARM ID."
   type        = string
 }
+variable "apps_subnet_id" {
+  description = "Dedicated delegated subnet for VNet-connected Container Apps environment."
+  type        = string
+}

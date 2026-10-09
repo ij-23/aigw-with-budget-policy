@@ -14,9 +14,14 @@ data "azurerm_container_registry" "existing" {
 }
 resource "azurerm_container_app_environment" "lab" {
   count                      = var.create_environment ? 1 : 0
-  name                       = "${var.name_prefix}-env"
+  name                       = "${var.name_prefix}-vnet-env"
   location                   = var.location
   resource_group_name        = var.resource_group_name
   log_analytics_workspace_id = var.log_analytics_id
-  tags                       = var.tags
+  infrastructure_subnet_id   = var.apps_subnet_id
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
+  tags = var.tags
 }

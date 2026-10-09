@@ -30,3 +30,23 @@ variable "log_analytics_id" {
   description = "Log Analytics workspace ARM resource ID."
   type        = string
 }
+variable "create_private_endpoint" {
+  description = "Create Cosmos SQL private endpoint."
+  type        = bool
+}
+variable "create_private_dns_zone" {
+  description = "Create private DNS zone instead of reusing existing zone."
+  type        = bool
+}
+variable "existing_private_dns_zone_id" {
+  description = "Existing privatelink.documents.azure.com DNS zone ARM ID."
+  type        = string
+}
+variable "vnet_id" {
+  description = "Virtual network linked to Cosmos private DNS."
+  type        = string
+}
+variable "endpoint_subnet_id" {
+  description = "Private endpoint subnet ARM ID."
+  type        = string
+}
