@@ -44,3 +44,27 @@ jobs:
             echo "::error::Vulnerable packages detected!"
             exit 1
           fi
+
+  validate-lab:
+    name: Validate Azure budget lab
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.15.3
+      - name: Format
+        run: terraform -chdir=iac fmt -check -recursive
+      - name: Initialize providers without a backend
+        run: terraform -chdir=iac init -backend=false -input=false
+      - name: Validate infrastructure
+        run: terraform -chdir=iac validate
+      - name: Validate lab scripts
+        run: |
+          bash -n scripts/lab/deploy-lab.sh
+          node --check scripts/lab/common.mjs
+          node --check scripts/lab/build-lab.mjs
+          node --check scripts/lab/e2e-budget.mjs

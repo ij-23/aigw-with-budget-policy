@@ -65,6 +65,8 @@ The script authenticates a real delegated test user, creates an access plan with
 
 `--verify-block` temporarily lowers only the lab policy to its recorded spending, verifies `429 budget_exceeded` without further spending, then restores $50 in a `finally` block. It does not consume $50 or fabricate usage. If killed during that phase, restore $50 in the dashboard before the next run.
 
+The gateway app requests security group claims for group allowances. When group assignments exist, missing or overage group claims cause a denial; Graph-based group-overage resolution is not implemented. The E2E test uses a direct user assignment.
+
 The dedicated account's password flow requires tenant policies to permit it. The script never disables MFA or Conditional Access. For an existing user or interactive login, set `LAB_USER_TOKEN` to a current delegated gateway token; do not commit it. `LAB_ADMIN_TOKEN` can supply an existing admin token.
 
 The report is `.lab/e2e-report.json`: request ID, provider tokens, actual USD cost, spending, remaining balance, reset time and block-test result. It excludes passwords and tokens.

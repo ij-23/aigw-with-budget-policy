@@ -33,8 +33,9 @@ resource "azuread_application_identifier_uri" "api" {
 }
 resource "azuread_service_principal" "api" { client_id = azuread_application.api.client_id }
 resource "azuread_application" "gateway" {
-  display_name = "${var.name_prefix} APIM AI Gateway"
-  owners       = [data.azuread_client_config.current.object_id]
+  group_membership_claims = ["SecurityGroup"]
+  display_name            = "${var.name_prefix} APIM AI Gateway"
+  owners                  = [data.azuread_client_config.current.object_id]
   api {
     requested_access_token_version = 2
     oauth2_permission_scope {

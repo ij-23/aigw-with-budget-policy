@@ -35,8 +35,11 @@ writeFileSync(join(root, '.lab', 'apim-policy.xml'), configuration.rendered_poli
 let healthy = false;
 for (let attempt = 0; attempt < 60; attempt++) {
   try {
-    const response = await fetch(`${configuration.dashboard_url}/api/auth-config`, { signal: AbortSignal.timeout(10000) });
-    if (response.ok && (await response.json()).clientId === configuration.api_client_id) { healthy = true; break; }
+    const [response, readiness] = await Promise.all([
+      fetch(`${configuration.dashboard_url}/api/auth-config`, { signal: AbortSignal.timeout(10000) }),
+      fetch(`${configuration.dashboard_url}/health`, { signal: AbortSignal.timeout(10000) }),
+    ]);
+    if (response.ok && readiness.ok && (await response.json()).clientId === configuration.api_client_id) { healthy = true; break; }
   } catch {}
   await sleep(5000);
 }
