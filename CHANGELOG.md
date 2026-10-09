@@ -9,7 +9,7 @@ Dated implementation history for maintainers.
 - Added a deployment walkthrough and policy/usage viewing instructions.
 - Added explicitly scoped Foundry discovery and canonical backend URL rewriting.
 - Validated policy expressions against live APIM and fixed raw C# expression rendering.
-- Added private Cosmos networking for tenants enforcing disabled public access.
+- Added private Cosmos and Key Vault networking for tenants enforcing disabled public access; moved credential storage to Terraform ARM secret resources.
 - Reduced ACR upload context to application sources and added build-only/image reuse options.
 
 ### 2026-10-08 — USD budget enforcement

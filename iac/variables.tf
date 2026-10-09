@@ -274,3 +274,23 @@ variable "existing_cosmos_private_dns_zone_id" {
   type        = string
   default     = ""
 }
+variable "create_key_vault_private_endpoint" {
+  description = "Create Key Vault private endpoint and DNS linkage; false uses existing vault networking."
+  type        = bool
+  default     = true
+}
+variable "create_key_vault_private_dns_zone" {
+  description = "Create privatelink.vaultcore.azure.net; false uses existing_key_vault_private_dns_zone_id."
+  type        = bool
+  default     = true
+}
+variable "existing_key_vault_private_dns_zone_id" {
+  description = "Existing privatelink.vaultcore.azure.net DNS zone ARM ID."
+  type        = string
+  default     = ""
+}
+variable "store_lab_credentials_in_key_vault" {
+  description = "Store lab credentials through the ARM deployment API. Deployer needs vaults/secrets/write permission."
+  type        = bool
+  default     = true
+}

@@ -32,7 +32,7 @@ A single ASP.NET Minimal API handles authentication/authorization pre-checks, mo
 
 ### Deploy the $50 APIM budget test environment
 
-Use the modular [Azure budget lab](docs/AZURE_BUDGET_LAB.md) in [iac](iac). Every platform has a create/use-existing flag and defaults to creation, including VNet-connected hosting and private Cosmos networking. The deployment script builds the policy engine and dashboard, then verifies real Entra user usage through APIM and a $50 monthly allowance.
+Use the modular [Azure budget lab](docs/AZURE_BUDGET_LAB.md) in [iac](iac). Every platform has a create/use-existing flag and defaults to creation, including VNet-connected hosting and private Cosmos and Key Vault networking. The deployment script builds the policy engine and dashboard, then verifies real Entra user usage through APIM and a $50 monthly allowance.
 
 ```bash
 cp iac/terraform.tfvars.example iac/terraform.tfvars

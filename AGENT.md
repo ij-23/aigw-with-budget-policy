@@ -4,7 +4,7 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and Cosmos/Redis 
 
 ## Azure budget lab
 
-- Networking: VNet-connected Consumption workload profiles; Cosmos SQL private endpoint and DNS with public access disabled. Bring-existing flags cover VNet, subnets, private DNS and Cosmos connectivity.
+- Networking: VNet-connected Consumption workload profiles; Cosmos SQL and Key Vault private endpoints and DNS with public access disabled. Terraform deploys vault secrets through ARM. Bring-existing flags cover VNet, subnets, private DNS and Cosmos connectivity.
 - Repository: `ij-23/aigw-with-budget-policy`; `iac/` is the authoritative modular test infrastructure.
 - Nine infrastructure modules provide create/use-existing flags; local state and credentials are ignored.
 - New Redis is internal Container Apps cache; single-write-region Cosmos is the ledger authority.

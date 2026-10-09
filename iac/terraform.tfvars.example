@@ -51,3 +51,8 @@ location              = "eastus2"
 # create_cosmos_private_dns_zone = false
 # existing_cosmos_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.documents.azure.com"
 # create_cosmos_private_endpoint = false # Only with an already reachable Cosmos endpoint.
+
+# create_key_vault_private_endpoint = false # Only with existing private vault connectivity.
+# create_key_vault_private_dns_zone = false
+# existing_key_vault_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
+# store_lab_credentials_in_key_vault = false # Defaults to true; requires ARM vaults/secrets/write.

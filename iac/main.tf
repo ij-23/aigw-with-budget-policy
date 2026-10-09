@@ -141,15 +141,20 @@ module "engine" {
   foundry_id                     = module.foundry.id
 }
 module "vault" {
-  source              = "./modules/vault"
-  create              = var.create_key_vault
-  existing_id         = var.existing_key_vault_id
-  name_prefix         = var.name_prefix
-  resource_group_name = local.resource_group_name
-  location            = var.location
-  tags                = var.tags
-  tenant_id           = var.tenant_id
-  deployer_object_id  = data.azurerm_client_config.current.object_id
+  create_private_endpoint      = var.create_key_vault_private_endpoint
+  create_private_dns_zone      = var.create_key_vault_private_dns_zone
+  existing_private_dns_zone_id = var.existing_key_vault_private_dns_zone_id
+  vnet_id                      = module.networking.vnet_id
+  endpoint_subnet_id           = module.networking.endpoints_subnet_id
+  source                       = "./modules/vault"
+  create                       = var.create_key_vault
+  existing_id                  = var.existing_key_vault_id
+  name_prefix                  = var.name_prefix
+  resource_group_name          = local.resource_group_name
+  location                     = var.location
+  tags                         = var.tags
+  tenant_id                    = var.tenant_id
+  deployer_object_id           = data.azurerm_client_config.current.object_id
 }
 resource "random_password" "test_user" {
   count   = var.create_test_user ? 1 : 0
@@ -236,4 +241,20 @@ resource "azurerm_api_management_api_policy" "budget" {
   resource_group_name = module.gateway.resource_group_name
   xml_content         = local.rendered_policy
   depends_on          = [azurerm_api_management_api_operation.chat]
+}
+
+# ARM secret deployment keeps setup compatible with vaults that disallow public data-plane access.
+# Values are sensitive and live only in ignored Terraform state and the vault.
+resource "azapi_resource" "lab_secret" {
+  for_each  = var.store_lab_credentials_in_key_vault ? toset(concat(["bootstrap-client-secret"], var.create_test_user ? ["test-user-password"] : [])) : toset([])
+  type      = "Microsoft.KeyVault/vaults/secrets@2023-07-01"
+  name      = each.key
+  parent_id = module.vault.id
+  body = {
+    properties = {
+      value      = each.key == "bootstrap-client-secret" ? local.admin_client_secret : random_password.test_user[0].result
+      attributes = { enabled = true }
+    }
+  }
+  response_export_values = []
 }

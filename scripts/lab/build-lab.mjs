@@ -1,4 +1,4 @@
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,16 +32,6 @@ if (process.argv.includes('--build-only')) {
 run(['containerapp', 'update', '--subscription', configuration.subscription_id, '--ids', configuration.policy_engine_id, '--image', image, '--output', 'none']);
 mkdirSync(join(root, '.lab'), { recursive: true, mode: 0o700 });
 writeFileSync(join(root, '.lab', 'apim-policy.xml'), configuration.rendered_policy, { mode: 0o600 });
-for (const [name, value] of Object.entries({ 'test-user-password': configuration.test_user_password, 'bootstrap-client-secret': configuration.admin_client_secret })) {
-  if (!value) continue;
-  const path = join(root, '.lab', `${name}.txt`);
-  writeFileSync(path, value, { mode: 0o600 });
-  try {
-    execFileSync('az', ['keyvault', 'secret', 'set', '--subscription', configuration.subscription_id, '--vault-name', configuration.key_vault_name, '--name', name, '--file', path, '--output', 'none'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
-  } finally {
-    rmSync(path, { force: true });
-  }
-}
 let healthy = false;
 for (let attempt = 0; attempt < 60; attempt++) {
   try {
