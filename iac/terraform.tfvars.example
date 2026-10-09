@@ -1,0 +1,44 @@
+subscription_id       = "YOUR-SUBSCRIPTION-ID"
+tenant_id             = "YOUR-TENANT-ID"
+admin_user_object_id  = "YOUR-ADMIN-USER-OBJECT-ID"
+publisher_email       = "you@example.com"
+test_user_domain      = "yourtenant.onmicrosoft.com"
+name_prefix           = "myuniquebudgetlab"
+resource_group_name   = "rg-aigw-budget-lab"
+location              = "eastus2"
+
+# Every platform is created by default. Set false and supply the existing ID.
+# create_apim       = false
+# existing_apim_id  = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ApiManagement/service/..."
+# create_foundry   = false
+# existing_foundry_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.CognitiveServices/accounts/..."
+# create_foundry_project = false
+# create_model_deployment = false
+# deployment_name = "your-existing-deployment"
+# create_cosmos = false
+# existing_cosmos_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.DocumentDB/databaseAccounts/..."
+# create_cosmos_schema = false # Existing aipolicy schema; this is the default when create_cosmos=false.
+# create_redis = false
+# existing_redis_connection_string = "your-redis:6380,ssl=True,abortConnect=False"
+# create_registry = false
+# existing_registry_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ContainerRegistry/registries/..."
+# create_container_environment = false
+# existing_container_environment_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.App/managedEnvironments/..."
+# create_policy_engine = false
+# existing_policy_engine_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.App/containerApps/..."
+# create_key_vault = false
+# existing_key_vault_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.KeyVault/vaults/..."
+# create_monitoring = false
+# existing_log_analytics_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.OperationalInsights/workspaces/..."
+# existing_app_insights_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Insights/components/..."
+# create_resource_group = false
+# create_test_user = false
+# existing_test_user_object_id = "YOUR-EXISTING-USER-OBJECT-ID"
+# create_identity = false
+# existing_identity = {
+#   api_client_id = "API-APP-ID"
+#   gateway_client_id = "GATEWAY-APP-ID"
+#   test_client_id = "PUBLIC-CLIENT-APP-ID"
+#   admin_client_id = "ADMIN-AUTOMATION-APP-ID"
+#   admin_client_secret = "SUPPLY-PRIVATELY"
+# }

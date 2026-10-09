@@ -1,0 +1,12 @@
+{
+  "id": "entra-jwt-ai-budget",
+  "displayName": "Entra JWT — AI USD budget (text chat)",
+  "version": "1.0",
+  "scope": "api",
+  "parameters": [
+    { "name": "TenantId", "type": "string", "required": true, "description": "Entra tenant UUID for the callers and budget configuration." },
+    { "name": "ExpectedAudience", "type": "string", "required": true, "description": "Expected audience of the original caller token." },
+    { "name": "ContainerAppAudience", "type": "string", "required": true, "description": "Policy engine audience for APIM managed identity." },
+    { "name": "ContainerAppUrl", "type": "string", "required": true, "description": "HTTPS base URL of the policy engine." }
+  ]
+}

@@ -1,0 +1,127 @@
+
+# Deployment outputs (may contain secrets)
+deployment-output.json
+
+# Environment-specific deployment parameters (copy parameter.sample.json to parameter.json)
+infra/bicep/parameter.json
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate*
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform.tfstate.lock.info
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+bower_components/
+
+# Build artifacts
+dist/
+build/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.class
+*.o
+*.so
+
+# Python virtual environments
+.venv/
+env/
+venv/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Azure deployment artifacts
+*.zip
+*.tar.gz
+*.bak
+*.swp
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Bicep cache
+*.bicep.cache
+
+# Azure CLI configuration
+.azure/
+
+# Deployment outputs
+infraOutputs.json
+
+# Certificates and keys
+*.pfx
+*.key
+*.pem
+*.p12
+*.cer
+
+# .NET user secrets / local settings
+secrets.json
+
+# Test results and coverage
+**/TestResults/
+**/BenchmarkDotNet.Artifacts/
+
+# Load test reports
+src/AIPolicyEngine.LoadTest/reports/
+**/parameter.json
+
+.agentic/
+.agentic-dev.json
+
+# Copilot agent configuration (local tooling, not part of the product)
+.copilot/
+.github/agents/
+.github/skills/
+.github/workflows/squad-*.yml
+.github/workflows/sync-squad-labels.yml
+.gitattributes
+
+# Squad AI team state (local tooling, not part of the product)
+.squad/
+.squad-workstream
+
+# Claude agent configurations
+.claude/
+.claude/agents/
+.claude/skills/
+
+# Local APIs Policy
+policies/all-apis-policy.json
+
+# Test environment state and credentials
+**/.terraform/
+**/terraform.tfstate*
+**/.terraform.tfstate.lock.info
+**/*.tfplan
+iac/terraform.tfvars
+iac/*.auto.tfvars*
+.lab/
+**/bin/
+**/obj/
+src/AIPolicyEngine.Api/wwwroot/
+.aspire/

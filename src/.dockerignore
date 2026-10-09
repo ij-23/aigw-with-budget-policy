@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.vs/
+**/.vscode/
+**/AIPolicyEngine.Tests/
+**/AIPolicyEngine.AppHost/
+*.slnx
+*.sln
+*.md
+.gitignore
