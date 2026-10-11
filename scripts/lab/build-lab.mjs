@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,6 +30,18 @@ if (process.argv.includes('--build-only')) {
   process.exit(0);
 }
 run(['containerapp', 'update', '--subscription', configuration.subscription_id, '--ids', configuration.policy_engine_id, '--image', image, '--output', 'none']);
+// Updating Container Apps secrets alone does not restart a running revision.
+// Restart active revisions so Terraform's Redis connection takes effect even
+// when LAB_IMAGE reuses the current image and no new revision is produced.
+const activeRevisions = JSON.parse(execFileSync('az', ['containerapp', 'revision', 'list',
+  '--subscription', configuration.subscription_id, '--name', configuration.policy_engine_name,
+  '--resource-group', configuration.resource_group_name, '--query', '[?properties.active].name',
+  '--output', 'json'], { cwd: root, encoding: 'utf8' }));
+for (const revision of activeRevisions) {
+  run(['containerapp', 'revision', 'restart', '--subscription', configuration.subscription_id,
+    '--name', configuration.policy_engine_name, '--resource-group', configuration.resource_group_name,
+    '--revision', revision, '--output', 'none']);
+}
 mkdirSync(join(root, '.lab'), { recursive: true, mode: 0o700 });
 writeFileSync(join(root, '.lab', 'apim-policy.xml'), configuration.rendered_policy, { mode: 0o600 });
 let healthy = false;
