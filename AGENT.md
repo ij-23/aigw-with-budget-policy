@@ -16,30 +16,26 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and Cosmos/Redis 
 
 ## Project structure
 
-Key maintained paths (not an exhaustive inventory):
-
 ```text
+docs/
+iac/
+  modules/
+policies/templates/
+scripts/lab/
 src/
   AIPolicyEngine.Api/
-    Endpoints/
-    Models/
-    Services/Budgets/
-    Program.cs
-  AIPolicyEngine.AppHost/
   AIPolicyEngine.ServiceDefaults/
-  AIPolicyEngine.Tests/Budgets/
-  AIPolicyEngine.Benchmarks/
-  AIPolicyEngine.LoadTest/
-  aipolicyengine-ui/src/
-    api/
-    pages/
-    components/
-policies/templates/entra-jwt-ai-budget/
-docs/
-infra/terraform/
-scripts/
-demo/
+  AIPolicyEngine.AppHost/
+  AIPolicyEngine.Tests/
+  aipolicyengine-ui/
 ```
+
+## Customer POC scope
+
+- Only Terraform under iac is supported for cloud provisioning; legacy stacks/scripts and unrelated demos are removed.
+- Only the Entra USD-budget policy is shipped. Access, routing and analytics services remain dependencies of its precheck/log flow.
+- Configure-lab generates private inputs without overwriting state/configuration. Deploy-lab finishes after readiness and setup; device-code E2E is separate.
+- Customer architecture is in docs/SOLUTION.md. No live tenant/account details belong in public guides.
 
 ## Budget decisions
 

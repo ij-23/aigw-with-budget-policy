@@ -6,7 +6,7 @@ This is the first implementation: **non-streaming, text-only Chat Completions**,
 
 ## Activate a $50/month allowance
 
-1. Deploy the updated API and dashboard using the existing [deployment guide](DOTNET_DEPLOYMENT_GUIDE.md). No additional database container or Azure service is introduced.
+1. Deploy the API, dashboard and infrastructure using the [POC deployment guide](AZURE_BUDGET_LAB.md). Budget records share the existing configuration container.
 2. Sign in with the existing `AIPolicy.Admin` role. Open **Budgets**, enter the Entra tenant UUID and select **Load budgets**.
 3. Add an allowance policy with amount **50**, period **Monthly**. Monthly resets occur on the first at 00:00 UTC. Weekly resets occur on Monday at 00:00 UTC. These are fixed calendar windows, not rolling windows or 30-day months.
 4. Assign the policy to a user's **object ID**, a group's **object ID**, or an application's **client ID**. Choose **Per member** to give each group member $50 independently. Choose **Shared by group** for one $50 pool. A user sharing the same policy through multiple per-member groups gets one allowance, not multiple allowances. If weekly and monthly policies both match, both must have funds.

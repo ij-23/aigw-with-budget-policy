@@ -2,15 +2,7 @@
 # Deployment outputs (may contain secrets)
 deployment-output.json
 
-# Environment-specific deployment parameters (copy parameter.sample.json to parameter.json)
-infra/bicep/parameter.json
 
-# Terraform
-infra/terraform/.terraform/
-infra/terraform/.terraform.lock.hcl
-infra/terraform/terraform.tfstate*
-infra/terraform/terraform.tfvars
-infra/terraform/.terraform.tfstate.lock.info
 
 # Logs
 *.log
@@ -86,8 +78,6 @@ secrets.json
 **/TestResults/
 **/BenchmarkDotNet.Artifacts/
 
-# Load test reports
-src/AIPolicyEngine.LoadTest/reports/
 **/parameter.json
 
 .agentic/

@@ -244,12 +244,7 @@ public sealed class TemplateRenderingTests
     }
 
     [Theory]
-    [InlineData("entra-jwt-ai")]
     [InlineData("entra-jwt-ai-budget")]
-    [InlineData("entra-jwt-ai-dlp")]
-    [InlineData("subscription-key-ai")]
-    [InlineData("subscription-key-ai-dlp")]
-    [InlineData("entra-jwt-rest")]
     public async Task RenderAsync_ShippedTemplate_RendersSuccessfully(string templateId)
     {
         using var root = TemplateRoot.ForRepositoryTemplates();

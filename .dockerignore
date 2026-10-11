@@ -12,8 +12,6 @@ src/**/.vscode/
 # Projects not needed in the image
 src/AIPolicyEngine.Tests/
 src/AIPolicyEngine.AppHost/
-src/AIPolicyEngine.Benchmarks/
-src/AIPolicyEngine.LoadTest/
 
 # Solution / misc files that add no value to the build
 src/*.slnx
@@ -21,7 +19,6 @@ src/*.sln
 src/*.md
 
 # Repo-level files not needed in the build context
-infra/
 iac/
 .lab/
 .terraform/
@@ -29,10 +26,7 @@ iac/
 **/*.tfstate*
 **/*.tfvars
 **/*.tfplan
-k8s/
-demo/
 docs/
-Tests/
 scripts/
 .git/
 .gitignore

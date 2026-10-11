@@ -1,5 +1,12 @@
 # Internal changelog
 
+### 2026-10-11 — Customer POC repository
+
+- Removed alternative deployment stacks, obsolete scripts/docs, unrelated policy templates, demo and benchmark/load-test projects, and root agent-tooling dependencies.
+- Added customer solution guide and a focused README with one Terraform deployment path.
+- Added private configuration generation and separated POC deployment/setup from interactive MFA verification.
+- Updated template tests and CI to validate the budget-only catalog and frontend.
+
 ## 2026-10-09 — Interactive budget lab verification
 
 - Added device-code sign-in for the delegated test user to support MFA enrollment.

@@ -81,7 +81,7 @@ variable "existing_policy_engine_id" {
   default     = ""
 }
 variable "container_image" {
-  description = "Optional already-built policy engine image. Empty deploys a bootstrap image until build-lab.sh updates it."
+  description = "Optional already-built policy engine image. Empty deploys a bootstrap image until build-lab.mjs updates it."
   type        = string
   default     = ""
 }

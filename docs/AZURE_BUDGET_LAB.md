@@ -1,6 +1,6 @@
 # Azure $50 budget lab
 
-This lab deploys the dashboard, policy engine, APIM gateway, Foundry account and project, one pinned GPT-4.1-mini deployment, Cosmos DB, password-protected internal Redis, ACR, Key Vault, Log Analytics, Application Insights and Entra applications. Terraform under [iac](../iac) owns the infrastructure. The original [infra/terraform](../infra/terraform) folder is upstream reference material; use `iac` for this lab.
+This lab deploys the dashboard, policy engine, APIM gateway, Foundry account and project, one pinned GPT-4.1-mini deployment, Cosmos DB, password-protected internal Redis, ACR, Key Vault, Log Analytics, Application Insights and Entra applications. Terraform under [iac](../iac) owns the infrastructure. This is the sole supported deployment path in this repository. See [the solution guide](SOLUTION.md) for architecture and scope.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ az login --tenant YOUR-TENANT-ID
 bash scripts/lab/deploy-lab.sh
 ```
 
-The script validates and applies a saved Terraform plan, builds through ACR Tasks, updates the Container App, stores credentials in Key Vault, then runs the E2E test. Local Docker is not required. Terraform initially provisions a bootstrap image; the real dashboard becomes available after the image build/update.
+The script validates and applies a saved Terraform plan, builds through ACR Tasks, updates the Container App, stores credentials in Key Vault, then seeds the $50/month allowance. Run the interactive E2E command separately after deployment. Local Docker is not required. Terraform initially provisions a bootstrap image; the real dashboard becomes available after the image build/update.
 
 State is **local** and excluded from Git along with variable files, plans, tokens, reports and credentials. Protect and back up the state: it contains passwords even when Terraform marks them sensitive. A public clone does not contain your environment state.
 
@@ -49,7 +49,7 @@ All create flags default to `true`. Set a flag to `false` and supply its existin
 
 The default deployment uses a VNet-connected Consumption workload profile environment and a Cosmos SQL private endpoint with private DNS. Cosmos and Key Vault public access are disabled. Key Vault has a private endpoint and DNS; Terraform stores credentials through the ARM secret-deployment API, so local deployment does not require vault data-plane network access. Set `store_lab_credentials_in_key_vault=false` to retain credentials only in sensitive, ignored Terraform state. Secret retrieval from the vault requires connectivity to its VNet. Set `container_workload_profile_name=null` for an existing legacy Consumption-only environment, or supply its workload profile name. An existing Container Apps environment must have network and DNS access to the supplied Cosmos endpoint. Changing the network type of an existing environment requires Terraform replacement.
 
-Redis is a small internal Container App used only as a cache, not a managed production Redis service. Budget spending is durable in Cosmos and survives Redis restarts. Use `create_redis=false` for an existing managed Redis service.
+Redis is a small internal Container App used for caching, rate controls and recent analytics, not a managed production Redis service. Budget spending is durable in Cosmos and survives Redis restarts. Use `create_redis=false` for an existing managed Redis service.
 
 Existing Cosmos accounts need `aipolicy` and containers `configuration` (`/partitionKey`), `audit-logs` and `billing-summaries` (`/customerKey`). `create_cosmos_schema` follows `create_cosmos` by default, so existing schemas are reused without import or management. Set `create_cosmos_schema=true` when an existing account needs a new lab schema. An existing account must have one write region. Financial ledger/configuration documents must not expire.
 
@@ -58,7 +58,7 @@ For another model or SKU, provide `LAB_PRICE_JSON` with verified prices and hard
 ## E2E verification
 
 ```bash
-node scripts/lab/e2e-budget.mjs --verify-block
+node scripts/lab/e2e-budget.mjs --device-code --verify-block
 ```
 
 The script authenticates a real delegated test user, creates an access plan with token allowances disabled, and assigns a **$50/month USD allowance to the user's object ID**. It calls APIM with a small non-streaming text request and verifies provider usage, the settled Cosmos reservation, the calculated actual cost, and the remaining balance.
@@ -92,3 +92,31 @@ Image builds upload a temporary source-only context, excluding credentials, Terr
 Initial support is non-streaming text Chat Completions, one response and an explicit output cap. Model account keys are disabled; APIM uses managed identity. Missing usage retains a reservation for verified reconciliation.
 
 For cleanup, review and apply a Terraform destroy plan with the same state and inputs after approving the specific resources. Existing parent platforms are not destroyed, but the lab APIs, schema and permission assignments owned by this state are removed. Do not delete the resource group as a shortcut.
+
+## Troubleshooting
+
+| Symptom | Next step |
+|---|---|
+| Directory setup returns 403 | Entra app consent, app-role grants and user creation need directory privileges separately from Azure subscription RBAC. Activate the appropriate roles and refresh sign-in. |
+| Device sign-in selects an administrator | Use a private browser window and select the exact test UPN printed by the script. |
+| MFA enrollment is required | Enroll the test user during interactive sign-in; do not disable tenant controls. |
+| Device code expired | Rerun the interactive test for a new code. |
+| Model creation fails for capacity or availability | Select an approved region/model and verify its rates and bounds before deployment. |
+| Setup cannot discover a model | Verify the configured Foundry account, deployment name and engine Reader permission. |
+| Engine readiness fails | Inspect Container Apps console/system logs; verify private Cosmos DNS/networking and Redis reachability. |
+| Allowance remains after a 429 | The conservative maximum request reservation may exceed the remaining funds. |
+| Test interrupted during the block phase | Restore the lab policy to $50 in the dashboard before retrying. |
+
+When a deployment fails partway through, keep its local state and variable file, fix the cause and rerun the deployment. Do not start a second environment with a new state to repair the first one. For an application-only update, run `node scripts/lab/build-lab.mjs`; for budget setup only, run `node scripts/lab/e2e-budget.mjs --setup-only`.
+
+## Remove the POC
+
+From the same checkout with its original state and configuration:
+
+```bash
+terraform -chdir=iac plan -destroy -out=destroy.tfplan
+# Review every deletion in the displayed plan before applying.
+terraform -chdir=iac apply destroy.tfplan
+```
+
+This deletes Terraform-managed resources and financial data; export any required evidence first. Existing parent services referenced with reuse flags remain, while child resources and grants owned by this state are removed. Verify that the plan matches the intended environment. Do not delete a resource group as a shortcut.

@@ -40,7 +40,7 @@
 
   <!--
     Build the React SPA into wwwroot before .NET SDK static web assets discovery runs,
-    so `dotnet publish /t:PublishContainer` (used by AZD) produces an image containing
+    so `dotnet publish /t:PublishContainer` produces an image containing
     the dashboard. Incremental: only rebuilds when SPA sources or package files change.
   -->
   <!--

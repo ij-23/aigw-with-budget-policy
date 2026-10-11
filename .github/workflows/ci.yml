@@ -65,6 +65,25 @@ jobs:
       - name: Validate lab scripts
         run: |
           bash -n scripts/lab/deploy-lab.sh
+          node --check scripts/lab/configure-lab.mjs
           node --check scripts/lab/common.mjs
           node --check scripts/lab/build-lab.mjs
           node --check scripts/lab/e2e-budget.mjs
+
+  frontend:
+    name: Validate dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/aipolicyengine-ui
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/aipolicyengine-ui/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

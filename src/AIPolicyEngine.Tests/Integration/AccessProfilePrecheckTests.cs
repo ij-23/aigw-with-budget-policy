@@ -13,29 +13,6 @@ public sealed class AccessProfilePrecheckTests : IClassFixture<ChargebackApiFact
 {
     private readonly ChargebackApiFactory _factory;
     private static readonly JsonSerializerOptions JsonOpts = JsonConfig.Default;
-    private static readonly string[] ShippedTemplateIds =
-    [
-        "entra-jwt-ai",
-        "entra-jwt-ai-dlp",
-        "subscription-key-ai",
-        "subscription-key-ai-dlp",
-        "entra-jwt-rest",
-        "keycloak-jwt-ai",
-        "keycloak-jwt-ai-dlp",
-        "keycloak-jwt-rest"
-    ];
-
-    private static readonly string[] PrecheckTemplateIds =
-    [
-        "entra-jwt-ai",
-        "entra-jwt-ai-dlp",
-        "subscription-key-ai",
-        "subscription-key-ai-dlp",
-        "keycloak-jwt-ai",
-        "keycloak-jwt-ai-dlp",
-        "keycloak-jwt-rest"
-    ];
-
     private const string ClientAppId = "access-client";
     private const string TenantId = "tenant-1";
 
@@ -208,67 +185,15 @@ public sealed class AccessProfilePrecheckTests : IClassFixture<ChargebackApiFact
     }
 
     [Fact]
-    public void TemplateRendering_ApiIdVariableExtraction()
+    public void BudgetTemplate_CarriesAccessRoutingAndAuditMetadata()
     {
-        foreach (var templateId in ShippedTemplateIds)
-        {
-            var policyXml = ReadTemplatePolicy(templateId);
-            Assert.Contains("<set-variable name=\"apiIdValue\" value=\"@(context.Api.Id)\" />", policyXml, StringComparison.Ordinal);
-            Assert.Contains("<set-variable name=\"operationIdValue\" value=\"@(context.Operation.Id)\" />", policyXml, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
-    public void TemplateRendering_PrecheckUrlCarriesApiAndOperation()
-    {
-        foreach (var templateId in PrecheckTemplateIds)
-        {
-            var policyXml = ReadTemplatePolicy(templateId);
-            // AI templates: ?deploymentId=...&apiId=...&operationId=...
-            // REST templates: ?apiId=...&operationId=... (no deploymentId)
-            Assert.Contains("apiId={(string)context.Variables[\"apiIdValue\"]}", policyXml, StringComparison.Ordinal);
-            Assert.Contains("operationId={(string)context.Variables[\"operationIdValue\"]}", policyXml, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
-    public void AiTemplates_UseResolvedFoundryBackend()
-    {
-        foreach (var policyXml in ShippedTemplateIds
-                     .Where(id => id.Contains("-ai", StringComparison.Ordinal))
-                     .Select(ReadTemplatePolicy))
-        {
-            Assert.Contains("[\"backendUrl\"]", policyXml, StringComparison.Ordinal);
-            Assert.Contains("base-url=\"@((string)context.Variables[\"backendUrl\"])\"", policyXml, StringComparison.Ordinal);
-            Assert.Contains("authentication-managed-identity resource=\"https://cognitiveservices.azure.com/\"", policyXml, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
-    public void TemplateRendering_LogPayloadCarriesAccessProfileMetadata()
-    {
-        foreach (var templateId in ShippedTemplateIds)
-        {
-            var policyXml = ReadTemplatePolicy(templateId);
-            Assert.Contains("JProperty(\"accessProfileId\"", policyXml, StringComparison.Ordinal);
-            Assert.Contains("GetValueOrDefault<string>(\"accessProfileId\")", policyXml, StringComparison.Ordinal);
-            Assert.Contains("JProperty(\"planId\"", policyXml, StringComparison.Ordinal);
-            Assert.Contains("GetValueOrDefault<string>(\"resolvedPlanId\")", policyXml, StringComparison.Ordinal);
-            Assert.Contains("JProperty(\"apiId\"", policyXml, StringComparison.Ordinal);
-            Assert.Contains("GetValueOrDefault<string>(\"apiIdValue\")", policyXml, StringComparison.Ordinal);
-            Assert.Contains("JProperty(\"operationId\"", policyXml, StringComparison.Ordinal);
-            Assert.Contains("GetValueOrDefault<string>(\"operationIdValue\")", policyXml, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
-    public void TemplateRendering_TemplateVersionBump()
-    {
-        foreach (var templateId in ShippedTemplateIds)
-        {
-            using var manifestJson = JsonDocument.Parse(ReadTemplateManifest(templateId));
-            Assert.Equal("1.1", manifestJson.RootElement.GetProperty("version").GetString());
-        }
+        var policy = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "policies", "templates", "entra-jwt-ai-budget", "policy.xml"));
+        Assert.Contains("Uri.EscapeDataString(context.Api.Id)", policy, StringComparison.Ordinal);
+        Assert.Contains("Uri.EscapeDataString(context.Operation.Id)", policy, StringComparison.Ordinal);
+        Assert.Contains("budgetBackendUrl", policy, StringComparison.Ordinal);
+        Assert.Contains("JProperty(\"accessProfileId\", precheck[\"accessProfileId\"])", policy, StringComparison.Ordinal);
+        Assert.Contains("JProperty(\"planId\", precheck[\"planId\"])", policy, StringComparison.Ordinal);
+        Assert.Contains("authentication-managed-identity resource=\"https://cognitiveservices.azure.com/\"", policy, StringComparison.Ordinal);
     }
 
     private HttpClient CreateClient(object? resolver = null)
@@ -290,12 +215,6 @@ public sealed class AccessProfilePrecheckTests : IClassFixture<ChargebackApiFact
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-token");
         return client;
     }
-
-    private static string ReadTemplatePolicy(string templateId)
-        => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "policies", "templates", templateId, "policy.xml"));
-
-    private static string ReadTemplateManifest(string templateId)
-        => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "policies", "templates", templateId, "template.json"));
 
     private static string FindRepositoryRoot()
     {

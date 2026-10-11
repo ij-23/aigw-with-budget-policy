@@ -18,9 +18,9 @@ public sealed class TemplateLibraryTests
 
         var templates = await root.Service.ListTemplatesAsync();
 
-        Assert.Equal(9, templates.Count);
+        Assert.Single(templates);
         Assert.Equal(
-            ["entra-jwt-ai", "entra-jwt-ai-budget", "entra-jwt-ai-dlp", "entra-jwt-rest", "keycloak-jwt-ai", "keycloak-jwt-ai-dlp", "keycloak-jwt-rest", "subscription-key-ai", "subscription-key-ai-dlp"],
+            ["entra-jwt-ai-budget"],
             templates.Select(template => template.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray());
     }
 
@@ -57,7 +57,7 @@ public sealed class TemplateLibraryTests
 
         var templates = await root.Service.ListTemplatesAsync();
 
-        Assert.Equal(9, templates.Count);
+        Assert.Single(templates);
     }
 
     [Fact]

@@ -178,12 +178,8 @@ public sealed class ApimManagementEndpointTests : IClassFixture<ChargebackApiFac
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(payload);
-        Assert.Equal(9, payload!.Templates.Count);
+        Assert.Single(payload!.Templates);
         Assert.Contains(payload.Templates, template => template.Id == "entra-jwt-ai-budget");
-        Assert.Contains(payload.Templates, template => template.Id == "entra-jwt-rest");
-        Assert.Contains(payload.Templates, template => template.Id == "keycloak-jwt-ai");
-        Assert.Contains(payload.Templates, template => template.Id == "keycloak-jwt-ai-dlp");
-        Assert.Contains(payload.Templates, template => template.Id == "keycloak-jwt-rest");
     }
 
     [Fact]
@@ -221,7 +217,7 @@ public sealed class ApimManagementEndpointTests : IClassFixture<ChargebackApiFac
 
         var response = await client.PostAsJsonAsync("/api/apim/apis/api-1/policy", new ApplyPolicyRequest
         {
-            TemplateId = "entra-jwt-ai",
+            TemplateId = "entra-jwt-ai-budget",
             Parameters = new Dictionary<string, JsonElement>
             {
                 ["ExpectedAudience"] = ToJson("api://engine")
@@ -390,9 +386,10 @@ public sealed class ApimManagementEndpointTests : IClassFixture<ChargebackApiFac
 
     private static ApplyPolicyRequest CreateValidApplyRequest() => new()
     {
-        TemplateId = "entra-jwt-ai",
+        TemplateId = "entra-jwt-ai-budget",
         Parameters = new Dictionary<string, JsonElement>
         {
+            ["TenantId"] = ToJson("11111111-1111-1111-1111-111111111111"),
             ["ExpectedAudience"] = ToJson("api://engine"),
             ["ContainerAppUrl"] = ToJson("https://engine.contoso.com"),
             ["ContainerAppAudience"] = ToJson("api://policy-engine")
@@ -427,10 +424,11 @@ public sealed class ApimManagementEndpointTests : IClassFixture<ChargebackApiFac
         ApiId = apiId,
         OperationId = operationId,
         ApiDisplayName = "Azure OpenAI API",
-        TemplateId = "entra-jwt-ai",
+        TemplateId = "entra-jwt-ai-budget",
         TemplateVersion = "1.0",
         Parameters = new Dictionary<string, JsonElement>
         {
+            ["TenantId"] = ToJson("11111111-1111-1111-1111-111111111111"),
             ["ExpectedAudience"] = ToJson("api://engine"),
             ["ContainerAppUrl"] = ToJson("https://engine.contoso.com"),
             ["ContainerAppAudience"] = ToJson("api://policy-engine")
