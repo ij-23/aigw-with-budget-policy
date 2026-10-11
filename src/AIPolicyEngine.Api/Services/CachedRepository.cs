@@ -5,8 +5,8 @@ namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
 /// Write-through cache layer. Wraps any IRepository&lt;T&gt; with Redis caching.
-/// Write path: Cosmos first (source of truth), then update Redis cache.
-/// Read path: Redis first (fast), fall back to Cosmos on cache miss.
+/// Write path: Postgres first (source of truth), then update Redis cache.
+/// Read path: Redis first (fast), fall back to Postgres on cache miss.
 /// </summary>
 public sealed class CachedRepository<T> : IRepository<T> where T : class
 {
@@ -45,10 +45,10 @@ public sealed class CachedRepository<T> : IRepository<T> where T : class
         }
         catch (RedisException ex)
         {
-            _logger.LogWarning(ex, "Redis read failed for {EntityType}/{Id}, falling back to Cosmos", typeof(T).Name, id);
+            _logger.LogWarning(ex, "Redis read failed for {EntityType}/{Id}, falling back to Postgres", typeof(T).Name, id);
         }
 
-        // Cache miss — read from Cosmos, populate Redis
+        // Cache miss — read from Postgres, populate Redis
         var entity = await _inner.GetAsync(id, ct);
         if (entity is not null)
         {
@@ -59,7 +59,7 @@ public sealed class CachedRepository<T> : IRepository<T> where T : class
 
     public async Task<List<T>> GetAllAsync(CancellationToken ct = default)
     {
-        // GetAll always goes to Cosmos (source of truth for complete listings)
+        // GetAll always goes to Postgres (source of truth for complete listings)
         var entities = await _inner.GetAllAsync(ct);
 
         // Refresh Redis cache for returned entities (parallel for throughput)
@@ -71,7 +71,7 @@ public sealed class CachedRepository<T> : IRepository<T> where T : class
 
     public async Task<T> UpsertAsync(T entity, CancellationToken ct = default)
     {
-        // Write to Cosmos FIRST (source of truth)
+        // Write to Postgres FIRST (source of truth)
         var persisted = await _inner.UpsertAsync(entity, ct);
 
         // Then update Redis cache
@@ -82,7 +82,7 @@ public sealed class CachedRepository<T> : IRepository<T> where T : class
 
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default)
     {
-        // Delete from Cosmos first
+        // Delete from Postgres first
         var deleted = await _inner.DeleteAsync(id, ct);
 
         if (deleted)

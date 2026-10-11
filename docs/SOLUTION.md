@@ -16,13 +16,13 @@ sequenceDiagram
     participant A as APIM
     participant E as Policy engine
     participant R as Azure Managed Redis
-    participant C as Cosmos DB
+    participant C as PostgreSQL
     participant F as Foundry model
     U->>A: Text chat request with delegated Entra token
     A->>A: Validate tenant, audience and JWT
     A->>E: Access and routing precheck
     E->>R: Cached access configuration and rate counters
-    Note over E,C: Access-cache misses may also read Cosmos
+    Note over E,C: Access-cache misses may also read PostgreSQL
     E-->>A: Approved backend and deployment
     A->>E: Reserve funds for authenticated consumer
     E->>C: Read policies, balances and request ID
@@ -44,7 +44,7 @@ sequenceDiagram
 
 The user signs in through Entra, including MFA when required. APIM extracts identity from the validated token, not caller-supplied identity headers. APIM authenticates its calls to the engine using managed identity and the `AIPolicy.Apim` app role. It invokes the approved Foundry endpoint using a separate Azure RBAC grant to its managed identity.
 
-The engine checks application access and routing before reserving dollars. Every request reaching budget authorization reads Cosmos. Redis does not authorize dollar spending. Successful inference is followed by another Cosmos accounting operation to settle actual cost.
+The engine checks application access and routing before reserving dollars. Every request reaching budget authorization reads PostgreSQL. Redis does not authorize dollar spending. Successful inference is followed by another PostgreSQL accounting operation to settle actual cost.
 
 ## How the monetary ceiling works
 
@@ -58,7 +58,7 @@ The reservation uses the deployment's **full configured hard input bound** and t
 
 Settlement calculates actual cost from input, cached-input and output counts using the immutable price snapshot saved with the reservation. Decimal amounts are rounded up to nine decimal places. Unused reserved money is released. The configured price book governs the allowance debit; this is not an exact Azure invoice or a cap on infrastructure charges.
 
-Cosmos stores policy configuration, period balances and reservations in the `configuration` container under partition `budget:{tenantId}`. ETag-guarded transactional batches update all applicable allowances together. The account must have one write region and financial records must not expire automatically. Conflicting updates are retried; exhausted retries deny the request rather than authorize uncommitted spending.
+PostgreSQL stores configuration, balances and reservations as JSONB records with relational primary keys. Every budget mutation acquires a transaction-scoped advisory lock for the tenant before reading, then commits all matching allowances and the reservation in one transaction. Lock waits are bounded; exhausted retries deny admission. Financial records have no automatic expiry.
 
 Each reservation authorizes one backend attempt. Duplicate reservation IDs cannot authorize another inference. Matching settlement retries do not charge twice. Timeouts or missing usage retain the reservation because a provider charge may still have occurred. Administrators reconcile pending reservations using verified usage and an evidence note.
 
@@ -91,11 +91,11 @@ Names derive from `name_prefix`; the customer configuration chooses its own subs
 | Azure Managed Redis (creation optional) | Managed cache, rate counters, recent traces and legacy usage coordination; private endpoint, TLS and engine Entra data access |
 | Container Apps environment | VNet-connected Consumption hosting for the engine |
 | Azure Container Registry | Remote image build and private image storage |
-| Cosmos DB account, `aipolicy` database, three containers | Durable configuration, budgets, audit logs and billing summaries |
+| PostgreSQL Flexible Server and `aipolicy` database | Durable configuration, budgets, audit logs and billing summaries |
 | Key Vault and lab secrets | Bootstrap secret and test-user password storage |
 | Virtual network and two subnets | Connectivity for apps and private endpoints |
-| Redis, Cosmos and Key Vault private endpoints, NICs, DNS zones/links | Access services whose public networking is disabled |
-| Managed identities and RBAC grants | App image pull, Cosmos data access, model discovery and APIM inference without embedded service credentials |
+| Redis, PostgreSQL and Key Vault private endpoints, NICs, DNS zones/links | Access services whose public networking is disabled |
+| Managed identities and RBAC grants | App image pull, Redis data access, model discovery and APIM inference; PostgreSQL uses a generated POC database password stored as a Container Apps secret |
 | Log Analytics, Application Insights and diagnostics | Application and infrastructure troubleshooting; budget data is viewed through the engine |
 | Azure-created environment infrastructure | Container Apps may create a separate managed resource group containing ingress networking |
 | Entra applications and service principals | Engine/dashboard API, gateway audience, public test client and bootstrap automation |
@@ -111,7 +111,7 @@ On success, the test shows provider token counts, request cost, total spending, 
 
 In the dashboard, sign in as the configured administrator, open **Budgets**, enter the tenant ID and choose **Load budgets**. Inspect policies, assignments, current balances and pending reservations. Balance records appear after reservations are first created. APIM's policy editor shows enforcement; `X-Budget-Request-Id` links a response to its reservation, and `X-Budget-Settlement` shows settled versus pending reconciliation.
 
-Azure Cost Management reports provider and infrastructure charges separately. The Cosmos ledger displayed by the dashboard is the allowance authority.
+Azure Cost Management reports provider and infrastructure charges separately. The PostgreSQL ledger displayed by the dashboard is the allowance authority.
 
 ## Scope and production considerations
 
@@ -119,7 +119,7 @@ Supported requests are non-streaming text Chat Completions, one completion and e
 
 The POC includes existing access/routing/analytics code because the budget policy uses those services. Other administrator screens may expose those supporting features. Their legacy pricing is separate from the approved **Budgets** price book.
 
-Default Azure Managed Redis is a small Balanced_B0 instance with high availability disabled for POC cost. Enable replicas using `redis_high_availability_enabled=true`. `create_redis=false` requires an existing reachable Redis service; running with no Redis is not supported. See [architecture and request flow](ARCHITECTURE.md) for diagrams and cache configuration. Budget administration uses the application's global admin role, not per-tenant delegated admin isolation. One tenant partition serializes financial updates: load-test contention, partition capacity and ledger growth before production. Archive and recovery designs must preserve duplicate protection and active financial records.
+Default Azure Managed Redis is a small Balanced_B0 instance with high availability disabled for POC cost. Enable replicas using `redis_high_availability_enabled=true`. `create_redis=false` requires an existing reachable Redis service; running with no Redis is not supported. See [architecture and request flow](ARCHITECTURE.md) for diagrams and cache configuration. Budget administration uses the application's global admin role, not per-tenant delegated admin isolation. One tenant ledger serializes financial updates: load-test lock contention and ledger growth before production. Archive and recovery designs must preserve duplicate protection and active financial records.
 
 Only the protected APIM routes should be reachable by model consumers; restrict direct model access and audit inherited/operation policies. Review model price changes, request bounds, identity permissions, monitoring, retention and reconciliation procedures for a production rollout. Financial state must be protected and backed up.
 

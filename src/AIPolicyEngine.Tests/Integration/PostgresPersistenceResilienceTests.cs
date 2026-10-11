@@ -9,25 +9,25 @@ using StackExchange.Redis;
 namespace AIPolicyEngine.Tests.Integration;
 
 /// <summary>
-/// B5.9 — Integration tests: Cosmos persistence resilience.
-/// Validates that the Cosmos-as-source-of-truth architecture works under
+/// B5.9 — Integration tests: Postgres persistence resilience.
+/// Validates that the Postgres-as-source-of-truth architecture works under
 /// cache failures, evictions, and full CRUD cycles through the repository pattern.
 /// </summary>
-public class CosmosPersistenceResilienceTests
+public class PostgresPersistenceResilienceTests
 {
-    private readonly IRepository<TestEntity> _cosmosRepo;
+    private readonly IRepository<TestEntity> _postgresRepo;
     private readonly FakeRedis _fakeRedis;
     private readonly ILogger? _logger;
     private readonly CachedRepository<TestEntity> _sut;
 
-    public CosmosPersistenceResilienceTests()
+    public PostgresPersistenceResilienceTests()
     {
-        _cosmosRepo = Substitute.For<IRepository<TestEntity>>();
+        _postgresRepo = Substitute.For<IRepository<TestEntity>>();
         _fakeRedis = new FakeRedis();
         _logger = Substitute.For<ILogger>();
 
         _sut = new CachedRepository<TestEntity>(
-            _cosmosRepo,
+            _postgresRepo,
             _fakeRedis.Multiplexer,
             redisKeyFromId: id => $"test:{id}",
             entityId: e => e.Id,
@@ -35,16 +35,16 @@ public class CosmosPersistenceResilienceTests
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Write to Cosmos → clear Redis → read back from Cosmos
+    // Write to Postgres → clear Redis → read back from Postgres
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task WritePlan_ClearRedis_ReadBack_GetsFromCosmosAndRepopulatesRedis()
+    public async Task WritePlan_ClearRedis_ReadBack_GetsFromPostgresAndRepopulatesRedis()
     {
-        // Arrange — write entity through cached repo (writes to Cosmos + Redis)
+        // Arrange — write entity through cached repo (writes to Postgres + Redis)
         var entity = new TestEntity { Id = "plan-gold", Name = "Gold Plan" };
-        _cosmosRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
-        _cosmosRepo.GetAsync("plan-gold", Arg.Any<CancellationToken>()).Returns(entity);
+        _postgresRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
+        _postgresRepo.GetAsync("plan-gold", Arg.Any<CancellationToken>()).Returns(entity);
 
         await _sut.UpsertAsync(entity);
 
@@ -58,26 +58,26 @@ public class CosmosPersistenceResilienceTests
         var cachedAfterClear = await _fakeRedis.Database.StringGetAsync("test:plan-gold");
         Assert.False(cachedAfterClear.HasValue, "Redis should be empty after clear");
 
-        // Read back — should fall through to Cosmos and repopulate Redis
+        // Read back — should fall through to Postgres and repopulate Redis
         var result = await _sut.GetAsync("plan-gold");
 
-        // Assert — got the data from Cosmos
+        // Assert — got the data from Postgres
         Assert.NotNull(result);
         Assert.Equal("plan-gold", result.Id);
         Assert.Equal("Gold Plan", result.Name);
-        await _cosmosRepo.Received(1).GetAsync("plan-gold", Arg.Any<CancellationToken>());
+        await _postgresRepo.Received(1).GetAsync("plan-gold", Arg.Any<CancellationToken>());
 
         // Assert — Redis was repopulated
         var repopulated = await _fakeRedis.Database.StringGetAsync("test:plan-gold");
-        Assert.True(repopulated.HasValue, "Redis should be repopulated after Cosmos fallback read");
+        Assert.True(repopulated.HasValue, "Redis should be repopulated after Postgres fallback read");
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Redis unavailable (throws) → falls back to Cosmos
+    // Redis unavailable (throws) → falls back to Postgres
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task WritePricing_RedisUnavailable_ReadFallsBackToCosmos()
+    public async Task WritePricing_RedisUnavailable_ReadFallsBackToPostgres()
     {
         // Arrange — use a broken Redis that throws on read
         var brokenRedis = Substitute.For<IConnectionMultiplexer>();
@@ -86,12 +86,12 @@ public class CosmosPersistenceResilienceTests
         brokenDb.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis down"));
 
-        var cosmosRepo = Substitute.For<IRepository<TestEntity>>();
+        var postgresRepo = Substitute.For<IRepository<TestEntity>>();
         var entity = new TestEntity { Id = "pricing-gpt4", Name = "GPT-4 Pricing" };
-        cosmosRepo.GetAsync("pricing-gpt4", Arg.Any<CancellationToken>()).Returns(entity);
+        postgresRepo.GetAsync("pricing-gpt4", Arg.Any<CancellationToken>()).Returns(entity);
 
         var sut = new CachedRepository<TestEntity>(
-            cosmosRepo, brokenRedis,
+            postgresRepo, brokenRedis,
             redisKeyFromId: id => $"pricing:{id}",
             entityId: e => e.Id,
             logger: _logger);
@@ -99,15 +99,15 @@ public class CosmosPersistenceResilienceTests
         // Act — read with Redis completely down
         var result = await sut.GetAsync("pricing-gpt4");
 
-        // Assert — seamless Cosmos fallback
+        // Assert — seamless Postgres fallback
         Assert.NotNull(result);
         Assert.Equal("pricing-gpt4", result.Id);
         Assert.Equal("GPT-4 Pricing", result.Name);
-        await cosmosRepo.Received(1).GetAsync("pricing-gpt4", Arg.Any<CancellationToken>());
+        await postgresRepo.Received(1).GetAsync("pricing-gpt4", Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task WritePricing_RedisThrowsOnWrite_CosmosDataSafe()
+    public async Task WritePricing_RedisThrowsOnWrite_PostgresDataSafe()
     {
         // Arrange — Redis throws on StringSetAsync (write path)
         var brokenRedis = Substitute.For<IConnectionMultiplexer>();
@@ -119,23 +119,23 @@ public class CosmosPersistenceResilienceTests
         brokenDb.KeyDeleteAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis down"));
 
-        var cosmosRepo = Substitute.For<IRepository<TestEntity>>();
+        var postgresRepo = Substitute.For<IRepository<TestEntity>>();
         var entity = new TestEntity { Id = "pricing-mini", Name = "Mini Pricing" };
-        cosmosRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
+        postgresRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
 
         var sut = new CachedRepository<TestEntity>(
-            cosmosRepo, brokenRedis,
+            postgresRepo, brokenRedis,
             redisKeyFromId: id => $"pricing:{id}",
             entityId: e => e.Id,
             logger: _logger);
 
-        // Act — write should succeed (Cosmos is source of truth)
+        // Act — write should succeed (Postgres is source of truth)
         var result = await sut.UpsertAsync(entity);
 
-        // Assert — Cosmos write happened, data returned despite Redis failure
+        // Assert — Postgres write happened, data returned despite Redis failure
         Assert.NotNull(result);
         Assert.Equal("Mini Pricing", result.Name);
-        await cosmosRepo.Received(1).UpsertAsync(entity, Arg.Any<CancellationToken>());
+        await postgresRepo.Received(1).UpsertAsync(entity, Arg.Any<CancellationToken>());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -147,8 +147,8 @@ public class CosmosPersistenceResilienceTests
     {
         // Arrange — write entity, then surgically delete just that key from Redis
         var entity = new TestEntity { Id = "client-abc:tenant-1", Name = "Acme Corp" };
-        _cosmosRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
-        _cosmosRepo.GetAsync("client-abc:tenant-1", Arg.Any<CancellationToken>()).Returns(entity);
+        _postgresRepo.UpsertAsync(entity, Arg.Any<CancellationToken>()).Returns(entity);
+        _postgresRepo.GetAsync("client-abc:tenant-1", Arg.Any<CancellationToken>()).Returns(entity);
 
         await _sut.UpsertAsync(entity);
 
@@ -158,10 +158,10 @@ public class CosmosPersistenceResilienceTests
         // Act — read back
         var result = await _sut.GetAsync("client-abc:tenant-1");
 
-        // Assert — got data from Cosmos, cache rebuilt
+        // Assert — got data from Postgres, cache rebuilt
         Assert.NotNull(result);
         Assert.Equal("Acme Corp", result.Name);
-        await _cosmosRepo.Received(1).GetAsync("client-abc:tenant-1", Arg.Any<CancellationToken>());
+        await _postgresRepo.Received(1).GetAsync("client-abc:tenant-1", Arg.Any<CancellationToken>());
 
         // Verify Redis was repopulated
         var rebuilt = await _fakeRedis.Database.StringGetAsync("test:client-abc:tenant-1");
@@ -173,38 +173,38 @@ public class CosmosPersistenceResilienceTests
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task FullCrudCycle_Create_Read_Update_Delete_CosmosHasDataAtEachStep()
+    public async Task FullCrudCycle_Create_Read_Update_Delete_PostgresHasDataAtEachStep()
     {
         // ── CREATE ──
         var entity = new TestEntity { Id = "crud-1", Name = "Original" };
-        _cosmosRepo.UpsertAsync(Arg.Is<TestEntity>(e => e.Id == "crud-1"), Arg.Any<CancellationToken>())
+        _postgresRepo.UpsertAsync(Arg.Is<TestEntity>(e => e.Id == "crud-1"), Arg.Any<CancellationToken>())
             .Returns(ci => ci.Arg<TestEntity>());
-        _cosmosRepo.GetAsync("crud-1", Arg.Any<CancellationToken>())
+        _postgresRepo.GetAsync("crud-1", Arg.Any<CancellationToken>())
             .Returns(entity);
 
         var created = await _sut.UpsertAsync(entity);
         Assert.Equal("Original", created.Name);
-        await _cosmosRepo.Received(1).UpsertAsync(
+        await _postgresRepo.Received(1).UpsertAsync(
             Arg.Is<TestEntity>(e => e.Id == "crud-1"),
             Arg.Any<CancellationToken>());
 
         // ── READ ── (should hit Redis cache)
-        _cosmosRepo.ClearReceivedCalls();
+        _postgresRepo.ClearReceivedCalls();
         var read = await _sut.GetAsync("crud-1");
         Assert.NotNull(read);
         Assert.Equal("Original", read.Name);
-        // Cache hit — Cosmos should NOT be called
-        await _cosmosRepo.DidNotReceive().GetAsync("crud-1", Arg.Any<CancellationToken>());
+        // Cache hit — Postgres should NOT be called
+        await _postgresRepo.DidNotReceive().GetAsync("crud-1", Arg.Any<CancellationToken>());
 
         // ── UPDATE ──
         var updated = new TestEntity { Id = "crud-1", Name = "Updated" };
-        _cosmosRepo.UpsertAsync(Arg.Is<TestEntity>(e => e.Name == "Updated"), Arg.Any<CancellationToken>())
+        _postgresRepo.UpsertAsync(Arg.Is<TestEntity>(e => e.Name == "Updated"), Arg.Any<CancellationToken>())
             .Returns(updated);
-        _cosmosRepo.GetAsync("crud-1", Arg.Any<CancellationToken>()).Returns(updated);
+        _postgresRepo.GetAsync("crud-1", Arg.Any<CancellationToken>()).Returns(updated);
 
         var updateResult = await _sut.UpsertAsync(updated);
         Assert.Equal("Updated", updateResult.Name);
-        await _cosmosRepo.Received(1).UpsertAsync(
+        await _postgresRepo.Received(1).UpsertAsync(
             Arg.Is<TestEntity>(e => e.Name == "Updated"),
             Arg.Any<CancellationToken>());
 
@@ -215,10 +215,10 @@ public class CosmosPersistenceResilienceTests
         Assert.Equal("Updated", cachedEntity!.Name);
 
         // ── DELETE ──
-        _cosmosRepo.DeleteAsync("crud-1", Arg.Any<CancellationToken>()).Returns(true);
+        _postgresRepo.DeleteAsync("crud-1", Arg.Any<CancellationToken>()).Returns(true);
         var deleted = await _sut.DeleteAsync("crud-1");
         Assert.True(deleted);
-        await _cosmosRepo.Received(1).DeleteAsync("crud-1", Arg.Any<CancellationToken>());
+        await _postgresRepo.Received(1).DeleteAsync("crud-1", Arg.Any<CancellationToken>());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -228,9 +228,9 @@ public class CosmosPersistenceResilienceTests
     [Fact]
     public async Task ConcurrentReads_DuringCacheMiss_AllSucceed_NoErrors()
     {
-        // Arrange — Redis empty, Cosmos has data (with slight delay to simulate I/O)
+        // Arrange — Redis empty, Postgres has data (with slight delay to simulate I/O)
         var entity = new TestEntity { Id = "concurrent-1", Name = "Shared Data" };
-        _cosmosRepo.GetAsync("concurrent-1", Arg.Any<CancellationToken>())
+        _postgresRepo.GetAsync("concurrent-1", Arg.Any<CancellationToken>())
             .Returns(callInfo => Task.Delay(10).ContinueWith(_ => (TestEntity?)entity));
 
         // Act — fire 10 parallel reads
@@ -259,8 +259,8 @@ public class CosmosPersistenceResilienceTests
         // Seed entity1 in Redis (cache hit path)
         _fakeRedis.SeedString("test:mix-1", JsonSerializer.Serialize(entity1, JsonConfig.Default));
 
-        // entity2 only in Cosmos (cache miss path)
-        _cosmosRepo.GetAsync("mix-2", Arg.Any<CancellationToken>()).Returns(entity2);
+        // entity2 only in Postgres (cache miss path)
+        _postgresRepo.GetAsync("mix-2", Arg.Any<CancellationToken>()).Returns(entity2);
 
         // Act — concurrent reads for both
         var hitTasks = Enumerable.Range(0, 5).Select(_ => _sut.GetAsync("mix-1"));
@@ -280,15 +280,15 @@ public class CosmosPersistenceResilienceTests
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task GetAllAsync_ClearRedis_FallsBackToCosmos()
+    public async Task GetAllAsync_ClearRedis_FallsBackToPostgres()
     {
-        // Arrange — Cosmos has entities
+        // Arrange — Postgres has entities
         var entities = new List<TestEntity>
         {
             new() { Id = "a1", Name = "Alpha" },
             new() { Id = "a2", Name = "Beta" }
         };
-        _cosmosRepo.GetAllAsync(Arg.Any<CancellationToken>()).Returns(entities);
+        _postgresRepo.GetAllAsync(Arg.Any<CancellationToken>()).Returns(entities);
 
         // First call populates Redis cache
         var first = await _sut.GetAllAsync();
@@ -297,16 +297,16 @@ public class CosmosPersistenceResilienceTests
         // Clear Redis (simulate restart)
         _fakeRedis.Clear();
 
-        // Act — second call should fall back to Cosmos
+        // Act — second call should fall back to Postgres
         var second = await _sut.GetAllAsync();
 
         // Assert — both calls return full data
         Assert.Equal(2, second.Count);
-        await _cosmosRepo.Received(2).GetAllAsync(Arg.Any<CancellationToken>());
+        await _postgresRepo.Received(2).GetAllAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task GetAllAsync_RedisThrows_FallsBackToCosmos()
+    public async Task GetAllAsync_RedisThrows_FallsBackToPostgres()
     {
         // Arrange — Redis totally broken
         var brokenRedis = Substitute.For<IConnectionMultiplexer>();
@@ -315,16 +315,16 @@ public class CosmosPersistenceResilienceTests
         brokenDb.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis down"));
 
-        var cosmosRepo = Substitute.For<IRepository<TestEntity>>();
+        var postgresRepo = Substitute.For<IRepository<TestEntity>>();
         var entities = new List<TestEntity>
         {
             new() { Id = "x1", Name = "X-Ray" },
             new() { Id = "x2", Name = "Yankee" }
         };
-        cosmosRepo.GetAllAsync(Arg.Any<CancellationToken>()).Returns(entities);
+        postgresRepo.GetAllAsync(Arg.Any<CancellationToken>()).Returns(entities);
 
         var sut = new CachedRepository<TestEntity>(
-            cosmosRepo, brokenRedis,
+            postgresRepo, brokenRedis,
             redisKeyFromId: id => $"test:{id}",
             entityId: e => e.Id,
             logger: _logger);
@@ -332,16 +332,16 @@ public class CosmosPersistenceResilienceTests
         // Act
         var result = await sut.GetAllAsync();
 
-        // Assert — fell back to Cosmos
+        // Assert — fell back to Postgres
         Assert.Equal(2, result.Count);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Delete resilience: Cosmos source of truth
+    // Delete resilience: Postgres source of truth
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task Delete_RedisThrows_CosmosDeleteStillSucceeds()
+    public async Task Delete_RedisThrows_PostgresDeleteStillSucceeds()
     {
         // Arrange — Redis broken on KeyDeleteAsync
         var brokenRedis = Substitute.For<IConnectionMultiplexer>();
@@ -350,11 +350,11 @@ public class CosmosPersistenceResilienceTests
         brokenDb.KeyDeleteAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis down"));
 
-        var cosmosRepo = Substitute.For<IRepository<TestEntity>>();
-        cosmosRepo.DeleteAsync("del-1", Arg.Any<CancellationToken>()).Returns(true);
+        var postgresRepo = Substitute.For<IRepository<TestEntity>>();
+        postgresRepo.DeleteAsync("del-1", Arg.Any<CancellationToken>()).Returns(true);
 
         var sut = new CachedRepository<TestEntity>(
-            cosmosRepo, brokenRedis,
+            postgresRepo, brokenRedis,
             redisKeyFromId: id => $"test:{id}",
             entityId: e => e.Id,
             logger: _logger);
@@ -362,9 +362,9 @@ public class CosmosPersistenceResilienceTests
         // Act — should not throw
         var result = await sut.DeleteAsync("del-1");
 
-        // Assert — Cosmos delete succeeded
+        // Assert — Postgres delete succeeded
         Assert.True(result);
-        await cosmosRepo.Received(1).DeleteAsync("del-1", Arg.Any<CancellationToken>());
+        await postgresRepo.Received(1).DeleteAsync("del-1", Arg.Any<CancellationToken>());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -372,7 +372,7 @@ public class CosmosPersistenceResilienceTests
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task EndToEnd_MultipleEntities_EvictAll_ReadAll_CosmosRebuildsFully()
+    public async Task EndToEnd_MultipleEntities_EvictAll_ReadAll_PostgresRebuildsFully()
     {
         // Arrange — write 5 entities
         var entities = Enumerable.Range(1, 5)
@@ -381,10 +381,10 @@ public class CosmosPersistenceResilienceTests
 
         foreach (var e in entities)
         {
-            _cosmosRepo.UpsertAsync(
+            _postgresRepo.UpsertAsync(
                 Arg.Is<TestEntity>(x => x.Id == e.Id),
                 Arg.Any<CancellationToken>()).Returns(e);
-            _cosmosRepo.GetAsync(e.Id, Arg.Any<CancellationToken>()).Returns(e);
+            _postgresRepo.GetAsync(e.Id, Arg.Any<CancellationToken>()).Returns(e);
             await _sut.UpsertAsync(e);
         }
 
@@ -398,7 +398,7 @@ public class CosmosPersistenceResilienceTests
             results.Add(await _sut.GetAsync(e.Id));
         }
 
-        // Assert — all came back from Cosmos and are correct
+        // Assert — all came back from Postgres and are correct
         Assert.All(results, r => Assert.NotNull(r));
         for (int i = 0; i < entities.Count; i++)
         {
@@ -410,7 +410,7 @@ public class CosmosPersistenceResilienceTests
         foreach (var e in entities)
         {
             var cached = await _fakeRedis.Database.StringGetAsync($"test:{e.Id}");
-            Assert.True(cached.HasValue, $"Redis should have {e.Id} after Cosmos fallback");
+            Assert.True(cached.HasValue, $"Redis should have {e.Id} after Postgres fallback");
         }
     }
 }

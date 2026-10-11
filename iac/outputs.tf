@@ -27,7 +27,9 @@ output "deployment_name" { value = var.deployment_name }
 output "foundry_id" { value = module.foundry.id }
 output "foundry_endpoint" { value = module.foundry.endpoint }
 output "key_vault_name" { value = module.vault.name }
-output "cosmos_id" { value = module.cosmos.id }
+output "postgresql_id" { value = module.postgresql.id }
+output "postgresql_hostname" { value = module.postgresql.hostname }
+output "location" { value = var.location }
 output "rendered_policy" { value = local.rendered_policy }
 
 output "redis_resource_id" { value = module.cache.id }

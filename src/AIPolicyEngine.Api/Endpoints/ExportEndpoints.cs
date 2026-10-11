@@ -6,7 +6,7 @@ namespace AIPolicyEngine.Api.Endpoints;
 
 /// <summary>
 /// Export endpoints for downloading AI policy data as CSV.
-/// Uses Cosmos DB as primary source, falls back to Redis for pre-existing data.
+/// Uses Postgres DB as primary source, falls back to Redis for pre-existing data.
 /// CSV downloads require the AIPolicy.Export app role.
 /// </summary>
 public static class ExportEndpoints

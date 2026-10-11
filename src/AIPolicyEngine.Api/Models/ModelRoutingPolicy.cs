@@ -2,7 +2,7 @@ namespace AIPolicyEngine.Api.Models;
 
 /// <summary>
 /// A routing policy that maps requested deployments to actual Foundry deployments.
-/// Stored in Cosmos with partition key "routing-policy".
+/// Stored in Postgres with partition key "routing-policy".
 /// </summary>
 public sealed class ModelRoutingPolicy
 {

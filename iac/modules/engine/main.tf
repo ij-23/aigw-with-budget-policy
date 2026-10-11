@@ -37,6 +37,10 @@ resource "azurerm_container_app" "engine" {
     name  = "redis-connection"
     value = var.redis_connection_string
   }
+  secret {
+    name  = "postgresql-connection"
+    value = var.postgresql_connection_string
+  }
   template {
     min_replicas = 1
     max_replicas = 2
@@ -49,11 +53,14 @@ resource "azurerm_container_app" "engine" {
         name        = "ConnectionStrings__redis"
         secret_name = "redis-connection"
       }
+      env {
+        name        = "ConnectionStrings__aipolicy"
+        secret_name = "postgresql-connection"
+      }
       dynamic "env" {
         for_each = {
           ASPNETCORE_URLS                       = "http://+:8080"
           AZURE_CLIENT_ID                       = azurerm_user_assigned_identity.engine[0].client_id
-          ConnectionStrings__aipolicy           = var.cosmos_endpoint
           AzureAd__Instance                     = "https://login.microsoftonline.com/"
           AzureAd__TenantId                     = var.tenant_id
           AzureAd__ClientId                     = var.api_client_id

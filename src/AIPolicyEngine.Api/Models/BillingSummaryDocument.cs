@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace AIPolicyEngine.Api.Models;
 
 /// <summary>
-/// Monthly billing summary per customer+deployment stored in Cosmos DB.
+/// Monthly billing summary per customer+deployment stored in Postgres DB.
 /// A "Customer" is the clientAppId:tenantId combination.
 /// Incrementally updated via upsert during batch writes.
 /// Partition key: /customerKey
@@ -86,7 +86,7 @@ public sealed class BillingSummaryDocument
     public DateTime UpdatedAt { get; set; }
 
     /// <summary>
-    /// Cosmos DB TTL in seconds. Set from configuration (default: 36 months).
+    /// Legacy API metadata; PostgreSQL does not apply this value as a retention policy.
     /// </summary>
     [JsonPropertyName("ttl")]
     public int Ttl { get; set; } = 94608000; // 36 months

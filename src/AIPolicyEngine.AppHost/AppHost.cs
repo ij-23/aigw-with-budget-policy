@@ -1,17 +1,9 @@
 var builder = DistributedApplication.CreateBuilder(args);
-
 var redis = builder.AddRedis("redis");
-
-var cosmos = builder.AddAzureCosmosDB("cosmos")
-    .RunAsEmulator();
-
-var cosmosDb = cosmos.AddCosmosDatabase("aipolicy");
-
-var api = builder.AddProject<Projects.AIPolicyEngine_Api>("aipolicyengine-api")
-    .WithReference(redis)
-    .WaitFor(redis)
-    .WithReference(cosmosDb)
-    .WaitFor(cosmos)
+var postgres = builder.AddPostgres("postgres");
+var database = postgres.AddDatabase("aipolicy");
+builder.AddProject<Projects.AIPolicyEngine_Api>("aipolicyengine-api")
+    .WithReference(redis).WaitFor(redis)
+    .WithReference(database).WaitFor(database)
     .WithExternalHttpEndpoints();
-
 builder.Build().Run();

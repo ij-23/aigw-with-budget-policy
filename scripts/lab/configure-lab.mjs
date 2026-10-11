@@ -19,7 +19,7 @@ const settings = {
   subscription_id: account.id, tenant_id: account.tenantId, admin_user_object_id: user.id,
   publisher_email: process.env.LAB_PUBLISHER_EMAIL || user.mail || user.userPrincipalName,
   test_user_domain: process.env.LAB_TEST_USER_DOMAIN || domain,
-  name_prefix: prefix, resource_group_name: `rg-${prefix}`, location: process.env.LAB_LOCATION || 'eastus2',
+  name_prefix: prefix, resource_group_name: `rg-${prefix}`, location: process.env.LAB_LOCATION || 'swedencentral',
 };
 writeFileSync(destination, Object.entries(settings).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join('\n') + '\n', { flag: 'wx', mode: 0o600 });
 console.log(`Created private configuration for subscription ${account.id}, tenant ${account.tenantId}, resource group ${settings.resource_group_name}.`);

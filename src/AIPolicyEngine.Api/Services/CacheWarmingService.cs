@@ -5,26 +5,26 @@ using StackExchange.Redis;
 namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
-/// Warms the Redis cache from Cosmos on startup (runs after migration).
+/// Warms the Redis cache from Postgres on startup.
 /// If Redis is unavailable, logs a warning but does not fail startup.
-/// If Cosmos is unavailable, fails startup — no source of truth means no service.
+/// If Postgres is unavailable, fails startup — no source of truth means no service.
 /// </summary>
 public sealed class CacheWarmingService : IHostedService
 {
-    private readonly CosmosPlanRepository _planRepo;
-    private readonly CosmosClientRepository _clientRepo;
-    private readonly CosmosPricingRepository _pricingRepo;
-    private readonly CosmosUsagePolicyRepository _usagePolicyRepo;
-    private readonly CosmosRoutingPolicyRepository _routingPolicyRepo;
+    private readonly PostgresPlanRepository _planRepo;
+    private readonly PostgresClientRepository _clientRepo;
+    private readonly PostgresPricingRepository _pricingRepo;
+    private readonly PostgresUsagePolicyRepository _usagePolicyRepo;
+    private readonly PostgresRoutingPolicyRepository _routingPolicyRepo;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<CacheWarmingService> _logger;
 
     public CacheWarmingService(
-        CosmosPlanRepository planRepo,
-        CosmosClientRepository clientRepo,
-        CosmosPricingRepository pricingRepo,
-        CosmosUsagePolicyRepository usagePolicyRepo,
-        CosmosRoutingPolicyRepository routingPolicyRepo,
+        PostgresPlanRepository planRepo,
+        PostgresClientRepository clientRepo,
+        PostgresPricingRepository pricingRepo,
+        PostgresUsagePolicyRepository usagePolicyRepo,
+        PostgresRoutingPolicyRepository routingPolicyRepo,
         IConnectionMultiplexer redis,
         ILogger<CacheWarmingService> logger)
     {
@@ -39,9 +39,9 @@ public sealed class CacheWarmingService : IHostedService
 
     public async Task StartAsync(CancellationToken ct)
     {
-        _logger.LogInformation("Cache warming starting — loading configuration from Cosmos");
+        _logger.LogInformation("Cache warming starting — loading configuration from Postgres");
 
-        // Cosmos must be available. If it throws, startup fails (by design).
+        // Postgres must be available. If it throws, startup fails (by design).
         var plans = await _planRepo.GetAllAsync(ct);
         var clients = await _clientRepo.GetAllAsync(ct);
         var pricing = await _pricingRepo.GetAllAsync(ct);
@@ -89,8 +89,8 @@ public sealed class CacheWarmingService : IHostedService
         catch (RedisException ex)
         {
             _logger.LogWarning(ex,
-                "Redis unavailable during cache warming — data loaded from Cosmos but cache is cold. " +
-                "Reads will fall back to Cosmos until Redis recovers.");
+                "Redis unavailable during cache warming — data loaded from Postgres but cache is cold. " +
+                "Reads will fall back to Postgres until Redis recovers.");
         }
     }
 

@@ -8,7 +8,7 @@ namespace AIPolicyEngine.Api.Endpoints;
 
 /// <summary>
 /// Plan and client assignment management endpoints for the billing system.
-/// Backed by Cosmos (source of truth) + Redis cache via IRepository.
+/// Backed by Postgres (source of truth) + Redis cache via IRepository.
 /// </summary>
 public static class PlanEndpoints
 {

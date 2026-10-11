@@ -1,6 +1,6 @@
 using AIPolicyEngine.Api.Models;
 using AIPolicyEngine.Api.Services.Budgets;
-using Microsoft.Azure.Cosmos;
+using Npgsql;
 
 namespace AIPolicyEngine.Api.Endpoints;
 
@@ -23,7 +23,7 @@ public static class BudgetEndpoints
                     http.Response.Headers.RetryAfter = Math.Max(1, (long)(reset - DateTimeOffset.UtcNow).TotalSeconds).ToString();
                 return Results.Json(new { error = ex.Message, code = ex.Code, resetsAt = ex.ResetsAt }, statusCode: ex.Status);
             }
-            catch (CosmosException)
+            catch (NpgsqlException)
             {
                 return Results.Json(new { error = "Budget ledger is unavailable. No new request is authorized.", code = "budget_store_unavailable" }, statusCode: 503);
             }

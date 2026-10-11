@@ -9,7 +9,7 @@ variable "tenant_id" {
 variable "location" {
   description = "Region for the lab services."
   type        = string
-  default     = "eastus2"
+  default     = "swedencentral"
 }
 variable "name_prefix" {
   description = "Globally unique lower-case prefix, 3-18 alphanumeric characters."
@@ -85,20 +85,31 @@ variable "container_image" {
   type        = string
   default     = ""
 }
-variable "create_cosmos" {
-  description = "Create single-write-region Cosmos and required containers; false uses an existing account."
+variable "create_postgresql" {
+  description = "Create PostgreSQL Flexible Server and aipolicy database; false uses an existing server."
   type        = bool
   default     = true
 }
-variable "existing_cosmos_id" {
-  description = "Existing Cosmos ARM ID; required aipolicy containers are provisioned by Terraform."
+variable "existing_postgresql_id" {
+  description = "Existing PostgreSQL Flexible Server ARM ID when create_postgresql=false."
   type        = string
   default     = ""
 }
-variable "create_cosmos_schema" {
-  description = "Create database and containers. Null follows create_cosmos; false uses an existing aipolicy schema without importing it."
-  type        = bool
-  default     = null
+variable "existing_postgresql_connection_string" {
+  description = "Existing Npgsql TLS connection string. Database user needs schema creation and CRUD privileges; configure private networking before deployment."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+variable "postgresql_sku_name" {
+  description = "PostgreSQL compute SKU for the POC."
+  type        = string
+  default     = "B_Standard_B1ms"
+}
+variable "postgresql_storage_mb" {
+  description = "PostgreSQL storage allocation in MiB."
+  type        = number
+  default     = 32768
 }
 variable "create_redis" {
   description = "Create Azure Managed Redis; false creates no Redis infrastructure and requires an existing Redis endpoint."
@@ -259,18 +270,18 @@ variable "existing_endpoints_subnet_id" {
   type        = string
   default     = ""
 }
-variable "create_cosmos_private_endpoint" {
-  description = "Create Cosmos private endpoint and DNS linkage; false requires existing reachable Cosmos networking."
+variable "create_postgresql_private_endpoint" {
+  description = "Create PostgreSQL private endpoint and DNS linkage; false requires existing reachable PostgreSQL networking."
   type        = bool
   default     = true
 }
-variable "create_cosmos_private_dns_zone" {
-  description = "Create privatelink.documents.azure.com; false uses existing_cosmos_private_dns_zone_id."
+variable "create_postgresql_private_dns_zone" {
+  description = "Create privatelink.postgres.database.azure.com; false uses existing_postgresql_private_dns_zone_id."
   type        = bool
   default     = true
 }
-variable "existing_cosmos_private_dns_zone_id" {
-  description = "Existing privatelink.documents.azure.com DNS zone ARM ID."
+variable "existing_postgresql_private_dns_zone_id" {
+  description = "Existing privatelink.postgres.database.azure.com DNS zone ARM ID."
   type        = string
   default     = ""
 }

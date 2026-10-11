@@ -66,16 +66,18 @@ module "cache" {
   name_prefix                  = var.name_prefix
   tags                         = var.tags
 }
-module "cosmos" {
-  create_private_endpoint      = var.create_cosmos_private_endpoint
-  create_private_dns_zone      = var.create_cosmos_private_dns_zone
-  existing_private_dns_zone_id = var.existing_cosmos_private_dns_zone_id
+module "postgresql" {
+  source                       = "./modules/postgresql"
+  create                       = var.create_postgresql
+  existing_id                  = var.existing_postgresql_id
+  existing_connection_string   = var.existing_postgresql_connection_string
+  sku_name                     = var.postgresql_sku_name
+  storage_mb                   = var.postgresql_storage_mb
+  create_private_endpoint      = var.create_postgresql_private_endpoint
+  create_private_dns_zone      = var.create_postgresql_private_dns_zone
+  existing_private_dns_zone_id = var.existing_postgresql_private_dns_zone_id
   vnet_id                      = module.networking.vnet_id
   endpoint_subnet_id           = module.networking.endpoints_subnet_id
-  source                       = "./modules/cosmos"
-  create                       = var.create_cosmos
-  create_schema                = coalesce(var.create_cosmos_schema, var.create_cosmos)
-  existing_id                  = var.existing_cosmos_id
   name_prefix                  = var.name_prefix
   resource_group_name          = local.resource_group_name
   location                     = var.location
@@ -143,7 +145,7 @@ module "engine" {
   redis_connection_string        = module.cache.connection_string
   create_redis_access_assignment = var.create_redis
   managed_redis_id               = module.cache.id
-  cosmos_endpoint                = module.cosmos.endpoint
+  postgresql_connection_string   = module.postgresql.connection_string
   app_insights_connection_string = module.monitoring.connection_string
   tenant_id                      = var.tenant_id
   api_client_id                  = local.api_client_id
@@ -204,13 +206,6 @@ resource "azurerm_role_assignment" "engine_apim" {
   scope                = module.gateway.id
   role_definition_name = "API Management Service Contributor"
   principal_id         = module.engine.principal_id
-}
-resource "azurerm_cosmosdb_sql_role_assignment" "engine" {
-  resource_group_name = module.cosmos.resource_group_name
-  account_name        = module.cosmos.name
-  role_definition_id  = "${module.cosmos.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002"
-  principal_id        = module.engine.principal_id
-  scope               = module.cosmos.id
 }
 locals {
   policy_parameters = {

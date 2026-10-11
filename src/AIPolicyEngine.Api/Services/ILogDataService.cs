@@ -4,13 +4,13 @@ namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
 /// Shared service for reading aggregated log data and request traces.
-/// Aggregate summaries come from Cosmos DB billing summaries for the full billing period.
+/// Aggregate summaries come from Postgres DB billing summaries for the full billing period.
 /// Real-time request traces come from Redis.
 /// </summary>
 public interface ILogDataService
 {
     /// <summary>
-    /// Returns aggregated usage summaries for the current billing period from Cosmos DB.
+    /// Returns aggregated usage summaries for the current billing period from Postgres DB.
     /// Each entry represents a client+deployment combination with totals for the full period.
     /// </summary>
     Task<List<LogEntry>> GetBillingPeriodSummariesAsync(ILogger logger, CancellationToken ct = default);

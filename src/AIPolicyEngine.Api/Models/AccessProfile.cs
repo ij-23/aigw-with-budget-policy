@@ -2,7 +2,7 @@ namespace AIPolicyEngine.Api.Models;
 
 /// <summary>
 /// Per-client access profile that scopes plan/routing/deployment access to an API or operation.
-/// Stored in Cosmos configuration container under the access-profile partition.
+/// Stored in Postgres configuration container under the access-profile partition.
 /// </summary>
 public sealed class AccessProfile
 {

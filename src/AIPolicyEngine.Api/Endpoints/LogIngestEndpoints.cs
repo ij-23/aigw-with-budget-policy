@@ -210,8 +210,8 @@ public static class LogIngestEndpoints
 
                 clientAssignment.LastUpdated = DateTime.UtcNow;
 
-                // Persist client assignment via repository (Cosmos → Redis cache)
-                // Extend the lock TTL before the Cosmos write to prevent expiry during I/O
+                // Persist client assignment via repository (Postgres → Redis cache)
+                // Extend the lock TTL before the Postgres write to prevent expiry during I/O
                 await db.LockExtendAsync(
                     RedisKeys.ClientUpdateLock(ingestRequest.ClientAppId, ingestRequest.TenantId),
                     lockToken, ClientUpdateLock.Ttl);
@@ -289,7 +289,7 @@ public static class LogIngestEndpoints
             // Emit Purview audit event (fire-and-forget via background channel)
             await purviewAudit.EmitAuditEventAsync(ingestRequest, clientAssignment?.DisplayName ?? ingestRequest.ClientAppId);
 
-            // Enqueue audit item for durable Cosmos DB persistence (non-blocking)
+            // Enqueue audit item for durable Postgres DB persistence (non-blocking)
             auditChannel.Writer.TryWrite(new AuditLogItem
             {
                 ClientAppId = ingestRequest.ClientAppId,

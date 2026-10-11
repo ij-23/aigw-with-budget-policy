@@ -1,5 +1,12 @@
 # Internal changelog
 
+
+### 2026-10-11 — PostgreSQL budget POC and Sweden Central defaults
+- Replaced Cosmos SDK, repositories, audit store and budget batches with Npgsql and PostgreSQL transactions.
+- Added SQL schema, tenant advisory locking and real database tests for concurrency, rollback, isolation and audit retry deduplication.
+- Replaced Cosmos Terraform platform with optional create/use-existing PostgreSQL Flexible Server, private endpoint and diagnostics.
+- Set regional infrastructure defaults to Sweden Central and documented rebuild and interactive budget testing.
+
 ### 2026-10-11 — Managed Redis and architecture
 
 - Replaced the Redis Container App with optional creation of Azure Managed Redis, private networking, Entra data access, diagnostics and configurable SKU/high availability.

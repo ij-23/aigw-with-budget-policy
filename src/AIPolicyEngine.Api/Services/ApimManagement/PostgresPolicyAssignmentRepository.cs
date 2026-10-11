@@ -3,9 +3,9 @@ using AIPolicyEngine.Api.Services;
 
 namespace AIPolicyEngine.Api.Services.ApimManagement;
 
-public sealed class CosmosPolicyAssignmentRepository : CosmosRepositoryBase<PolicyAssignment>, IPolicyAssignmentRepository
+public sealed class PostgresPolicyAssignmentRepository : PostgresRepositoryBase<PolicyAssignment>, IPolicyAssignmentRepository
 {
-    public CosmosPolicyAssignmentRepository(ConfigurationContainerProvider provider, ILogger<CosmosPolicyAssignmentRepository> logger)
+    public PostgresPolicyAssignmentRepository(PostgresDocumentStore provider, ILogger<PostgresPolicyAssignmentRepository> logger)
         : base(provider, "policy-assignment", logger)
     {
     }
@@ -16,7 +16,7 @@ public sealed class CosmosPolicyAssignmentRepository : CosmosRepositoryBase<Poli
     public Task<bool> DeleteAsync(string apiId, string? operationId, CancellationToken ct = default)
         => base.DeleteAsync(PolicyAssignment.BuildId(apiId, operationId), ct);
 
-    protected override void PrepareForCosmos(PolicyAssignment entity)
+    protected override void PrepareEntity(PolicyAssignment entity)
     {
         entity.Id = PolicyAssignment.BuildId(entity.ApiId, entity.OperationId);
         entity.PartitionKey = "policy-assignment";

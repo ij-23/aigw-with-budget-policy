@@ -38,25 +38,10 @@ builder.AddRedisClient("redis", configureOptions: options =>
     }
 });
 
-// Cosmos DB via Aspire integration (uses connection named "aipolicy" from AppHost)
-builder.AddAzureCosmosClient("aipolicy", configureClientOptions: options =>
-{
-    options.UseSystemTextJsonSerializerWithOptions = new System.Text.Json.JsonSerializerOptions
-    {
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-    };
-},
-configureSettings: settings =>
-{
-    settings.Credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-    {
-        ExcludeVisualStudioCredential = true,
-        ExcludeVisualStudioCodeCredential = true,
-        ExcludeAzureCliCredential = true,
-        ExcludeAzurePowerShellCredential = true,
-        ExcludeAzureDeveloperCliCredential = true,
-    });
-});
+// PostgreSQL is the durable configuration and budget authority.
+builder.Services.AddSingleton<Npgsql.NpgsqlDataSource>(_ => Npgsql.NpgsqlDataSource.Create(
+    builder.Configuration.GetConnectionString("aipolicy") ?? throw new InvalidOperationException("PostgreSQL connection 'aipolicy' is required.")));
+builder.Services.AddHealthChecks().AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"]);
 
 // Register application services
 builder.Services.AddSingleton<IChargebackCalculator, ChargebackCalculator>();
@@ -68,23 +53,23 @@ builder.Services.AddHttpClient<IDeploymentDiscoveryService, DeploymentDiscoveryS
 builder.Services.Configure<ApimManagementOptions>(builder.Configuration.GetSection("Apim"));
 builder.Services.AddSingleton<ArmClient>(_ => new ArmClient(new DefaultAzureCredential()));
 
-// Repository pattern: Cosmos (source of truth) + Redis (cache layer)
-builder.Services.AddSingleton<ConfigurationContainerProvider>();
+// Repository pattern: Postgres (source of truth) + Redis (cache layer)
+builder.Services.AddSingleton<PostgresDocumentStore>();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<IBudgetStore, CosmosBudgetStore>();
+builder.Services.AddSingleton<IBudgetStore, PostgresBudgetStore>();
 builder.Services.AddSingleton<BudgetService>();
-builder.Services.AddSingleton<CosmosPlanRepository>();
-builder.Services.AddSingleton<CosmosClientRepository>();
-builder.Services.AddSingleton<CosmosPricingRepository>();
-builder.Services.AddSingleton<CosmosUsagePolicyRepository>();
-builder.Services.AddSingleton<CosmosRoutingPolicyRepository>();
-builder.Services.AddSingleton<CosmosPolicyAssignmentRepository>();
-builder.Services.AddSingleton<IAccessProfileRepository, CosmosAccessProfileRepository>();
+builder.Services.AddSingleton<PostgresPlanRepository>();
+builder.Services.AddSingleton<PostgresClientRepository>();
+builder.Services.AddSingleton<PostgresPricingRepository>();
+builder.Services.AddSingleton<PostgresUsagePolicyRepository>();
+builder.Services.AddSingleton<PostgresRoutingPolicyRepository>();
+builder.Services.AddSingleton<PostgresPolicyAssignmentRepository>();
+builder.Services.AddSingleton<IAccessProfileRepository, PostgresAccessProfileRepository>();
 builder.Services.AddSingleton<IAccessProfileResolver, AccessProfileResolver>();
 
 builder.Services.AddSingleton<IRepository<PlanData>>(sp =>
     new CachedRepository<PlanData>(
-        sp.GetRequiredService<CosmosPlanRepository>(),
+        sp.GetRequiredService<PostgresPlanRepository>(),
         sp.GetRequiredService<IConnectionMultiplexer>(),
         id => RedisKeys.Plan(id),
         entity => entity.Id,
@@ -92,7 +77,7 @@ builder.Services.AddSingleton<IRepository<PlanData>>(sp =>
 
 builder.Services.AddSingleton<IRepository<ClientPlanAssignment>>(sp =>
     new CachedRepository<ClientPlanAssignment>(
-        sp.GetRequiredService<CosmosClientRepository>(),
+        sp.GetRequiredService<PostgresClientRepository>(),
         sp.GetRequiredService<IConnectionMultiplexer>(),
         id => $"client:{id}",
         entity => $"{entity.ClientAppId}:{entity.TenantId}",
@@ -100,7 +85,7 @@ builder.Services.AddSingleton<IRepository<ClientPlanAssignment>>(sp =>
 
 builder.Services.AddSingleton<IRepository<ModelPricing>>(sp =>
     new CachedRepository<ModelPricing>(
-        sp.GetRequiredService<CosmosPricingRepository>(),
+        sp.GetRequiredService<PostgresPricingRepository>(),
         sp.GetRequiredService<IConnectionMultiplexer>(),
         id => RedisKeys.Pricing(id),
         entity => entity.ModelId,
@@ -108,7 +93,7 @@ builder.Services.AddSingleton<IRepository<ModelPricing>>(sp =>
 
 builder.Services.AddSingleton<IRepository<UsagePolicySettings>>(sp =>
     new CachedRepository<UsagePolicySettings>(
-        sp.GetRequiredService<CosmosUsagePolicyRepository>(),
+        sp.GetRequiredService<PostgresUsagePolicyRepository>(),
         sp.GetRequiredService<IConnectionMultiplexer>(),
         id => $"settings:{id}",
         _ => "usage-policy",
@@ -116,13 +101,13 @@ builder.Services.AddSingleton<IRepository<UsagePolicySettings>>(sp =>
 
 builder.Services.AddSingleton<IRepository<ModelRoutingPolicy>>(sp =>
     new CachedRepository<ModelRoutingPolicy>(
-        sp.GetRequiredService<CosmosRoutingPolicyRepository>(),
+        sp.GetRequiredService<PostgresRoutingPolicyRepository>(),
         sp.GetRequiredService<IConnectionMultiplexer>(),
         id => RedisKeys.RoutingPolicy(id),
         entity => entity.Id,
         sp.GetRequiredService<ILogger<CachedRepository<ModelRoutingPolicy>>>()));
 
-builder.Services.AddSingleton<IPolicyAssignmentRepository>(sp => sp.GetRequiredService<CosmosPolicyAssignmentRepository>());
+builder.Services.AddSingleton<IPolicyAssignmentRepository>(sp => sp.GetRequiredService<PostgresPolicyAssignmentRepository>());
 builder.Services.AddSingleton<IApimCatalogService, ApimCatalogService>();
 builder.Services.AddSingleton<ITemplateLibraryService, TemplateLibraryService>();
 builder.Services.AddSingleton<ApimPolicyApplyService>();
@@ -132,12 +117,11 @@ builder.Services.AddSingleton(Channel.CreateUnbounded<ApimPolicyApplyWorkItem>(
 
 builder.Services.AddSingleton<IUsagePolicyStore, UsagePolicyStore>();
 
-// Startup services: migration first, then cache warming (sequential, blocks app start)
-builder.Services.AddHostedService<RedisToCosmosMigrationService>();
+// Startup cache warming verifies PostgreSQL before accepting requests
 builder.Services.AddHostedService<CacheWarmingService>();
 builder.Services.AddHostedService<ApimPolicyApplyBackgroundService>();
 
-// Audit log channel + background writer for batched Cosmos DB writes
+// Audit log channel + background writer for batched Postgres DB writes
 builder.Services.AddSingleton(Channel.CreateUnbounded<AuditLogItem>(
     new UnboundedChannelOptions { SingleReader = true }));
 builder.Services.AddHostedService<AuditLogWriter>();

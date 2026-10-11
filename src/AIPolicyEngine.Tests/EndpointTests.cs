@@ -657,7 +657,7 @@ public class EndpointTests : IClassFixture<ChargebackApiFactory>
     [Fact]
     public async Task GetUsageSummary_IgnoresPricingKeys()
     {
-        // Seed billing summary in Cosmos mock for the current period
+        // Seed billing summary in Postgres mock for the current period
         var period = $"{DateTime.UtcNow:yyyy-MM}";
         var summaries = new List<BillingSummaryDocument>
         {

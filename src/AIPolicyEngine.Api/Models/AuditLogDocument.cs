@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace AIPolicyEngine.Api.Models;
 
 /// <summary>
-/// Individual request audit log stored in Cosmos DB for durable financial record-keeping.
+/// Individual request audit log stored in Postgres DB for durable financial record-keeping.
 /// Partition key: /customerKey (clientAppId:tenantId)
 /// </summary>
 public sealed class AuditLogDocument
@@ -98,7 +98,7 @@ public sealed class AuditLogDocument
     public string BillingPeriod { get; set; } = string.Empty;
 
     /// <summary>
-    /// Cosmos DB TTL in seconds. Set from configuration (default: 36 months).
+    /// Legacy retention metadata; PostgreSQL does not expire records automatically.
     /// </summary>
     [JsonPropertyName("ttl")]
     public int Ttl { get; set; } = 94608000; // 36 months

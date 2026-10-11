@@ -19,6 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: budgettest
+          POSTGRES_PASSWORD: test-only-ci
+          POSTGRES_DB: aipolicy_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U budgettest -d aipolicy_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_POSTGRES_CONNECTION: "Host=localhost;Port=5432;Database=aipolicy_test;Username=budgettest;Password=test-only-ci"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -66,6 +80,10 @@ jobs:
         run: |
           terraform -chdir=iac/modules/cache init -backend=false -input=false
           terraform -chdir=iac/modules/cache test
+      - name: Test PostgreSQL creation and reuse
+        run: |
+          terraform -chdir=iac/modules/postgresql init -backend=false -input=false
+          terraform -chdir=iac/modules/postgresql test
       - name: Validate lab scripts
         run: |
           bash -n scripts/lab/deploy-lab.sh

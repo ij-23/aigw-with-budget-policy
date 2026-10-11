@@ -5,7 +5,7 @@ publisher_email       = "you@example.com"
 test_user_domain      = "yourtenant.onmicrosoft.com"
 name_prefix           = "myuniquebudgetlab"
 resource_group_name   = "rg-aigw-budget-lab"
-location              = "eastus2"
+location              = "swedencentral"
 
 # Every platform is created by default. Set false and supply the existing ID.
 # create_apim       = false
@@ -15,15 +15,15 @@ location              = "eastus2"
 # create_foundry_project = false
 # create_model_deployment = false
 # deployment_name = "your-existing-deployment"
-# create_cosmos = false
-# existing_cosmos_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.DocumentDB/databaseAccounts/..."
-# create_cosmos_schema = false # Existing aipolicy schema; this is the default when create_cosmos=false.
+# create_postgresql = false
+# existing_postgresql_connection_string = "Host=your-server.postgres.database.azure.com;Database=aipolicy;Username=...;Password=...;SSL Mode=VerifyFull"
+# existing_postgresql_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.DBforPostgreSQL/flexibleServers/..."
 # create_redis = false
-# existing_redis_connection_string = "your-cache.eastus2.redis.azure.net:10000,ssl=True,abortConnect=False"
+# existing_redis_connection_string = "your-cache.swedencentral.redis.azure.net:10000,ssl=True,abortConnect=False"
 # The engine still requires Redis. This flag skips creation, it does not disable Redis use.
 # For existing Redis: grant its data access to the engine identity and provide network/DNS reachability.
 # redis_sku_name = "Balanced_B0"
-# redis_location = "eastus" # Null/default uses location; override only for cache availability.
+# redis_location = "swedencentral" # Null/default uses location; override only for cache availability.
 # redis_high_availability_enabled = true # Default false for a small POC.
 # create_redis_private_dns_zone = false
 # existing_redis_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.redis.azure.net"
@@ -50,14 +50,14 @@ location              = "eastus2"
 #   admin_client_secret = "SUPPLY-PRIVATELY"
 # }
 
-# Private Cosmos networking is created by default.
+# Private PostgreSQL networking is created by default.
 # create_network = false
 # existing_vnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/..."
 # existing_apps_subnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/.../subnets/..."
 # existing_endpoints_subnet_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/.../subnets/..."
-# create_cosmos_private_dns_zone = false
-# existing_cosmos_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.documents.azure.com"
-# create_cosmos_private_endpoint = false # Only with an already reachable Cosmos endpoint.
+# create_postgresql_private_dns_zone = false
+# existing_postgresql_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.postgres.database.azure.com"
+# create_postgresql_private_endpoint = false # Only with an already reachable PostgreSQL endpoint.
 
 # create_key_vault_private_endpoint = false # Only with existing private vault connectivity.
 # create_key_vault_private_dns_zone = false

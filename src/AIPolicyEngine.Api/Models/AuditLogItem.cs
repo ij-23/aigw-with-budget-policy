@@ -1,7 +1,7 @@
 namespace AIPolicyEngine.Api.Models;
 
 /// <summary>
-/// Item enqueued into the audit log channel for background persistence to Cosmos DB.
+/// Item enqueued into the audit log channel for background persistence to Postgres DB.
 /// </summary>
 public sealed class AuditLogItem
 {

@@ -1,7 +1,7 @@
 namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
-/// Generic repository contract. Cosmos is the store, Redis is the cache.
+/// Generic repository contract. Postgres is the store, Redis is the cache.
 /// </summary>
 public interface IRepository<T> where T : class
 {

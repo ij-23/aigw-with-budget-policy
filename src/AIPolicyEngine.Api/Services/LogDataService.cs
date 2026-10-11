@@ -51,7 +51,7 @@ public sealed class LogDataService : ILogDataService
         }
 
         logger.LogInformation(
-            "Fetched {Count} billing summaries from Cosmos DB for period(s): {Periods}",
+            "Fetched {Count} billing summaries from Postgres DB for period(s): {Periods}",
             allSummaries.Count, string.Join(", ", periods));
 
         return allSummaries.Select(doc => new LogEntry

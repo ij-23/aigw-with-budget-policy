@@ -6,7 +6,7 @@ namespace AIPolicyEngine.Api.Endpoints;
 /// <summary>
 /// CRUD endpoints for model routing policies.
 /// Validates all deployment references against DeploymentDiscoveryService.
-/// Backed by Cosmos (source of truth) + Redis cache via IRepository.
+/// Backed by Postgres (source of truth) + Redis cache via IRepository.
 /// </summary>
 public static class RoutingPolicyEndpoints
 {

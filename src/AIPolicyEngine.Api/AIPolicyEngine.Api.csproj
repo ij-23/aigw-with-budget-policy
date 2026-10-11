@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="Aspire.StackExchange.Redis" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.ResourceManager.ApiManagement" />
@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Database\*.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\policies\templates\**\*"
              Link="policies\templates\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"

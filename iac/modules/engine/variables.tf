@@ -43,9 +43,10 @@ variable "redis_connection_string" {
   type        = string
   sensitive   = true
 }
-variable "cosmos_endpoint" {
-  description = "Cosmos HTTPS endpoint."
+variable "postgresql_connection_string" {
+  description = "PostgreSQL Npgsql TLS connection string."
   type        = string
+  sensitive   = true
 }
 variable "app_insights_connection_string" {
   description = "Application Insights connection string."

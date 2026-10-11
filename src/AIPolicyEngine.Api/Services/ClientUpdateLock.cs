@@ -9,7 +9,7 @@ namespace AIPolicyEngine.Api.Services;
 /// </summary>
 public static class ClientUpdateLock
 {
-    // TTL must cover the full read-compute-write cycle including Cosmos latency.
+    // TTL must cover the full read-compute-write cycle including Postgres latency.
     // If the lock expires mid-operation, concurrent requests can read stale data.
     public static readonly TimeSpan Ttl = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(25);

@@ -1,283 +1,108 @@
+using System.Globalization;
+using System.Text.Json;
 using AIPolicyEngine.Api.Models;
-using Microsoft.Azure.Cosmos;
-
+using Npgsql;
 namespace AIPolicyEngine.Api.Services;
 
-/// <summary>
-/// Cosmos DB-backed audit store for durable financial record-keeping.
-/// Ensures database and containers exist on first use.
-/// </summary>
-public sealed class AuditStore : IAuditStore
+public sealed class AuditStore(PostgresDocumentStore provider, ILogger<AuditStore> logger) : IAuditStore
 {
-    private const string DatabaseName = "aipolicy";
-    private const string AuditLogsContainer = "audit-logs";
-    private const string BillingSummariesContainer = "billing-summaries";
-    private const int DefaultTtlSeconds = 94608000; // 36 months
-
-    private readonly CosmosClient _cosmosClient;
-    private readonly ILogger<AuditStore> _logger;
-    private readonly SemaphoreSlim _initLock = new(1, 1);
-    private bool _initialized;
-
-    public AuditStore(CosmosClient cosmosClient, ILogger<AuditStore> logger)
-    {
-        _cosmosClient = cosmosClient;
-        _logger = logger;
-    }
-
-    private Container AuditLogs => _cosmosClient.GetContainer(DatabaseName, AuditLogsContainer);
-    private Container BillingSummaries => _cosmosClient.GetContainer(DatabaseName, BillingSummariesContainer);
-
-    /// <summary>
-    /// Ensures the Cosmos database and containers exist. Called once on first write.
-    /// </summary>
-    private async Task EnsureInitializedAsync(CancellationToken ct = default)
-    {
-        if (_initialized) return;
-
-        await _initLock.WaitAsync(ct);
-        try
-        {
-            if (_initialized) return;
-
-            var dbResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(DatabaseName, cancellationToken: ct);
-            var database = dbResponse.Database;
-
-            await database.CreateContainerIfNotExistsAsync(new ContainerProperties
-            {
-                Id = AuditLogsContainer,
-                PartitionKeyPath = "/customerKey",
-                DefaultTimeToLive = DefaultTtlSeconds
-            }, cancellationToken: ct);
-
-            await database.CreateContainerIfNotExistsAsync(new ContainerProperties
-            {
-                Id = BillingSummariesContainer,
-                PartitionKeyPath = "/customerKey",
-                DefaultTimeToLive = DefaultTtlSeconds
-            }, cancellationToken: ct);
-
-            _initialized = true;
-            _logger.LogInformation("Cosmos DB database and containers verified");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize Cosmos DB database/containers");
-            throw;
-        }
-        finally
-        {
-            _initLock.Release();
-        }
-    }
-
     public async Task WriteBatchAsync(IReadOnlyList<AuditLogDocument> documents, CancellationToken ct = default)
     {
-        await EnsureInitializedAsync(ct);
-
-        var tasks = new List<Task>(documents.Count);
+        await provider.EnsureInitializedAsync(ct);
+        await using var connection = await provider.Source.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
         foreach (var doc in documents)
-        {
-            // UpsertItemAsync is idempotent — safe for retries after partial batch success
-            tasks.Add(AuditLogs.UpsertItemAsync(
-                doc,
-                new PartitionKey(doc.CustomerKey),
-                cancellationToken: ct));
-        }
-
-        await Task.WhenAll(tasks);
+            await UpsertAsync(connection, transaction, "audit_documents", doc.CustomerKey, doc.Id, doc, ct);
+        await transaction.CommitAsync(ct);
     }
 
     public async Task UpsertBillingSummariesAsync(IReadOnlyList<AuditLogItem> items, CancellationToken ct = default)
     {
-        // Group items by customer+deployment+period to minimize upserts
-        var groups = items.GroupBy(i => (i.ClientAppId, i.TenantId, i.DeploymentId, Period: $"{i.Timestamp:yyyy-MM}"));
-
-        foreach (var group in groups)
+        await provider.EnsureInitializedAsync(ct);
+        foreach (var group in items.GroupBy(i => (i.ClientAppId, i.TenantId, i.DeploymentId, Period: $"{i.Timestamp:yyyy-MM}")))
         {
             var (clientAppId, tenantId, deploymentId, period) = group.Key;
             var customerKey = $"{clientAppId}:{tenantId}";
-            var summaryId = $"{clientAppId}:{tenantId}:{deploymentId}:{period}";
-            var partitionKey = new PartitionKey(customerKey);
-
-            const int maxConcurrencyRetries = 5;
-            for (var attempt = 0; attempt < maxConcurrencyRetries; attempt++)
+            var id = $"{clientAppId}:{tenantId}:{deploymentId}:{period}";
+            await using var connection = await provider.Source.OpenConnectionAsync(ct);
+            await using var transaction = await connection.BeginTransactionAsync(ct);
+            await using var guard = new NpgsqlCommand("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", connection, transaction);
+            guard.Parameters.AddWithValue("billing:" + id);
+            await guard.ExecuteNonQueryAsync(ct);
+            await using var get = new NpgsqlCommand("SELECT body::text FROM billing_summaries WHERE customer_key=$1 AND id=$2", connection, transaction);
+            get.Parameters.AddWithValue(customerKey); get.Parameters.AddWithValue(id);
+            var json = await get.ExecuteScalarAsync(ct) as string;
+            var first = group.First();
+            var summary = json is null ? new BillingSummaryDocument
             {
-                BillingSummaryDocument summary;
-                string? etag = null;
-
-                try
+                Id = id, CustomerKey = customerKey, ClientAppId = clientAppId, TenantId = tenantId,
+                DeploymentId = deploymentId, BillingPeriod = period, DisplayName = first.DisplayName,
+                Audience = first.Audience, Model = first.Model
+            } : JsonSerializer.Deserialize<BillingSummaryDocument>(json, JsonConfig.Default)!;
+            foreach (var item in group)
+            {
+                // Use the same deterministic identifier as the audit writer for retry deduplication.
+                var requestId = AuditLogWriter.GenerateDeterministicId(item);
+                await using var dedup = new NpgsqlCommand("INSERT INTO billing_processed_requests(customer_key,request_id) VALUES($1,$2) ON CONFLICT DO NOTHING", connection, transaction);
+                dedup.Parameters.AddWithValue(customerKey); dedup.Parameters.AddWithValue(requestId);
+                if (await dedup.ExecuteNonQueryAsync(ct) == 0) continue;
+                summary.PromptTokens += item.PromptTokens; summary.CompletionTokens += item.CompletionTokens;
+                summary.TotalTokens += item.TotalTokens; summary.ImageTokens += item.ImageTokens; summary.RequestCount++;
+                if (decimal.TryParse(item.CostToUs, NumberStyles.Number, CultureInfo.InvariantCulture, out var cost)) summary.CostToUs += cost;
+                if (decimal.TryParse(item.CostToCustomer, NumberStyles.Number, CultureInfo.InvariantCulture, out var customerCost)) summary.CostToCustomer += customerCost;
+                summary.IsOverbilled |= item.IsOverbilled;
+                if (item.EffectiveRequestCost.HasValue)
                 {
-                    var existing = await BillingSummaries.ReadItemAsync<BillingSummaryDocument>(
-                        summaryId, partitionKey, cancellationToken: ct);
-                    summary = existing.Resource;
-                    etag = existing.ETag;
-                }
-                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    var first = group.First();
-                    summary = new BillingSummaryDocument
+                    summary.TotalEffectiveRequests = (summary.TotalEffectiveRequests ?? 0m) + item.EffectiveRequestCost.Value;
+                    if (!string.IsNullOrEmpty(item.TierName))
                     {
-                        Id = summaryId,
-                        CustomerKey = customerKey,
-                        ClientAppId = clientAppId,
-                        DisplayName = first.DisplayName,
-                        TenantId = first.TenantId,
-                        Audience = first.Audience,
-                        DeploymentId = deploymentId,
-                        Model = first.Model,
-                        BillingPeriod = period,
-                    };
-                }
-
-                foreach (var item in group)
-                {
-                    summary.PromptTokens += item.PromptTokens;
-                    summary.CompletionTokens += item.CompletionTokens;
-                    summary.TotalTokens += item.TotalTokens;
-                    summary.ImageTokens += item.ImageTokens;
-                    summary.RequestCount++;
-
-                    if (decimal.TryParse(item.CostToUs, out var costToUs))
-                        summary.CostToUs += costToUs;
-                    if (decimal.TryParse(item.CostToCustomer, out var costToCustomer))
-                        summary.CostToCustomer += costToCustomer;
-
-                    if (item.IsOverbilled)
-                        summary.IsOverbilled = true;
-
-                    // Accumulate multiplier billing fields
-                    if (item.EffectiveRequestCost.HasValue)
-                    {
-                        summary.TotalEffectiveRequests = (summary.TotalEffectiveRequests ?? 0m) + item.EffectiveRequestCost.Value;
-
-                        if (!string.IsNullOrEmpty(item.TierName))
-                        {
-                            summary.EffectiveRequestsByTier ??= new Dictionary<string, decimal>();
-                            if (!summary.EffectiveRequestsByTier.ContainsKey(item.TierName))
-                                summary.EffectiveRequestsByTier[item.TierName] = 0m;
-                            summary.EffectiveRequestsByTier[item.TierName] += item.EffectiveRequestCost.Value;
-                        }
-                    }
-
-                    if (item.MultiplierOverageCost.HasValue && item.MultiplierOverageCost.Value > 0)
-                        summary.MultiplierOverageCost = (summary.MultiplierOverageCost ?? 0m) + item.MultiplierOverageCost.Value;
-
-                    // Keep display name fresh
-                    if (!string.IsNullOrEmpty(item.DisplayName))
-                        summary.DisplayName = item.DisplayName;
-                }
-
-                summary.UpdatedAt = DateTime.UtcNow;
-
-                try
-                {
-                    var options = new ItemRequestOptions();
-                    if (etag != null)
-                    {
-                        // Optimistic concurrency: fail if another writer modified since our read
-                        options.IfMatchEtag = etag;
-                    }
-                    await BillingSummaries.UpsertItemAsync(summary, partitionKey,
-                        requestOptions: options, cancellationToken: ct);
-                    break; // success
-                }
-                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
-                {
-                    // Another writer updated the document — re-read and retry
-                    _logger.LogWarning(
-                        "Billing summary ETag conflict for {SummaryId} (attempt {Attempt}/{Max}), retrying",
-                        summaryId, attempt + 1, maxConcurrencyRetries);
-
-                    if (attempt == maxConcurrencyRetries - 1)
-                    {
-                        _logger.LogError("Billing summary ETag conflict exhausted retries for {SummaryId}", summaryId);
-                        throw;
+                        summary.EffectiveRequestsByTier ??= new();
+                        summary.EffectiveRequestsByTier[item.TierName] = summary.EffectiveRequestsByTier.GetValueOrDefault(item.TierName) + item.EffectiveRequestCost.Value;
                     }
                 }
+                if (item.MultiplierOverageCost is > 0)
+                    summary.MultiplierOverageCost = (summary.MultiplierOverageCost ?? 0m) + item.MultiplierOverageCost.Value;
+                if (!string.IsNullOrEmpty(item.DisplayName)) summary.DisplayName = item.DisplayName;
             }
+            summary.UpdatedAt = DateTime.UtcNow;
+            await UpsertAsync(connection, transaction, "billing_summaries", customerKey, id, summary, ct);
+            await transaction.CommitAsync(ct);
         }
+        logger.LogDebug("Billing summaries committed to PostgreSQL.");
     }
 
-    public async Task<List<BillingSummaryDocument>> GetBillingSummariesAsync(
-        string billingPeriod, CancellationToken ct = default)
-    {
-        await EnsureInitializedAsync(ct);
-        var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.billingPeriod = @period")
-            .WithParameter("@period", billingPeriod);
-
-        return await QueryAllAsync<BillingSummaryDocument>(BillingSummaries, query, ct);
-    }
-
-    public async Task<List<AuditLogDocument>> GetClientAuditLogsAsync(
-        string customerKey, string billingPeriod, CancellationToken ct = default)
-    {
-        await EnsureInitializedAsync(ct);
-        var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.customerKey = @customerKey AND c.billingPeriod = @period ORDER BY c.timestamp DESC")
-            .WithParameter("@customerKey", customerKey)
-            .WithParameter("@period", billingPeriod);
-
-        var options = new QueryRequestOptions { PartitionKey = new PartitionKey(customerKey) };
-        return await QueryAllAsync<AuditLogDocument>(AuditLogs, query, ct, options);
-    }
-
+    public Task<List<BillingSummaryDocument>> GetBillingSummariesAsync(string billingPeriod, CancellationToken ct = default)
+        => QueryAsync<BillingSummaryDocument>("SELECT body::text FROM billing_summaries WHERE body->>'billingPeriod'=$1 ORDER BY id", [billingPeriod], ct);
+    public Task<List<AuditLogDocument>> GetClientAuditLogsAsync(string customerKey, string billingPeriod, CancellationToken ct = default)
+        => QueryAsync<AuditLogDocument>("SELECT body::text FROM audit_documents WHERE customer_key=$1 AND body->>'billingPeriod'=$2 ORDER BY body->>'timestamp' DESC", [customerKey, billingPeriod], ct);
     public async Task<List<ExportPeriod>> GetAvailablePeriodsAsync(CancellationToken ct = default)
     {
-        await EnsureInitializedAsync(ct);
-        var query = new QueryDefinition(
-            "SELECT DISTINCT VALUE c.billingPeriod FROM c");
-
-        var periods = await QueryAllAsync<string>(BillingSummaries, query, ct);
-
-        return periods
-            .Where(p => p.Length == 7 && p[4] == '-')
-            .Select(p => new ExportPeriod
-            {
-                Year = int.Parse(p[..4]),
-                Month = int.Parse(p[5..])
-            })
-            .OrderByDescending(p => p.Year)
-            .ThenByDescending(p => p.Month)
-            .ToList();
+        var summaries = await QueryAsync<BillingSummaryDocument>("SELECT body::text FROM billing_summaries", [], ct);
+        return summaries.Select(s => s.BillingPeriod).Distinct()
+            .Where(p => DateTime.TryParseExact(p, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            .OrderDescending().Select(p => new ExportPeriod { Year = int.Parse(p[..4]), Month = int.Parse(p[5..]) }).ToList();
     }
+    public async Task<List<ExportClient>> GetClientsForPeriodAsync(string billingPeriod, CancellationToken ct = default)
+        => (await GetBillingSummariesAsync(billingPeriod, ct)).GroupBy(r => $"{r.ClientAppId}:{r.TenantId}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => new ExportClient { ClientAppId = g.First().ClientAppId, TenantId = g.First().TenantId, DisplayName = g.First().DisplayName })
+            .OrderBy(c => c.DisplayName).ToList();
 
-    public async Task<List<ExportClient>> GetClientsForPeriodAsync(
-        string billingPeriod, CancellationToken ct = default)
+    private async Task<List<T>> QueryAsync<T>(string sql, string[] parameters, CancellationToken ct)
     {
-        await EnsureInitializedAsync(ct);
-        var query = new QueryDefinition(
-            "SELECT DISTINCT c.clientAppId, c.tenantId, c.displayName FROM c WHERE c.billingPeriod = @period")
-            .WithParameter("@period", billingPeriod);
-
-        var results = await QueryAllAsync<BillingSummaryDocument>(BillingSummaries, query, ct);
-
-        return results
-            .GroupBy(r => $"{r.ClientAppId}:{r.TenantId}", StringComparer.OrdinalIgnoreCase)
-            .Select(g => new ExportClient
-            {
-                ClientAppId = g.First().ClientAppId,
-                TenantId = g.First().TenantId,
-                DisplayName = g.First().DisplayName
-            })
-            .OrderBy(c => c.DisplayName)
-            .ToList();
-    }
-
-    private async Task<List<T>> QueryAllAsync<T>(
-        Container container,
-        QueryDefinition query,
-        CancellationToken ct,
-        QueryRequestOptions? options = null)
-    {
+        await provider.EnsureInitializedAsync(ct);
+        await using var command = provider.Source.CreateCommand(sql);
+        foreach (var value in parameters) command.Parameters.AddWithValue(value);
+        await using var reader = await command.ExecuteReaderAsync(ct);
         var results = new List<T>();
-        using var iterator = container.GetItemQueryIterator<T>(query, requestOptions: options);
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync(ct);
-            results.AddRange(response);
-        }
+        while (await reader.ReadAsync(ct)) results.Add(JsonSerializer.Deserialize<T>(reader.GetString(0), JsonConfig.Default)!);
         return results;
+    }
+    private static async Task UpsertAsync<T>(NpgsqlConnection connection, NpgsqlTransaction transaction, string table, string customerKey, string id, T doc, CancellationToken ct)
+    {
+        // Table name is an internal constant, never request data.
+        await using var command = new NpgsqlCommand($"INSERT INTO {table}(customer_key,id,body) VALUES($1,$2,$3::jsonb) ON CONFLICT(customer_key,id) DO UPDATE SET body=EXCLUDED.body", connection, transaction);
+        command.Parameters.AddWithValue(customerKey); command.Parameters.AddWithValue(id);
+        command.Parameters.AddWithValue(JsonSerializer.Serialize(doc, JsonConfig.Default));
+        await command.ExecuteNonQueryAsync(ct);
     }
 }

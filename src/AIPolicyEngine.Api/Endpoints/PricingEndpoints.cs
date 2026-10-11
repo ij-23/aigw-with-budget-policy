@@ -5,7 +5,7 @@ namespace AIPolicyEngine.Api.Endpoints;
 
 /// <summary>
 /// CRUD endpoints for model pricing configuration.
-/// Backed by Cosmos (source of truth) + Redis cache via IRepository.
+/// Backed by Postgres (source of truth) + Redis cache via IRepository.
 /// </summary>
 public static class PricingEndpoints
 {

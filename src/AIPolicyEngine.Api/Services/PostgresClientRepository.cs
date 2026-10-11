@@ -3,15 +3,15 @@ using AIPolicyEngine.Api.Models;
 namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
-/// Cosmos-backed persistence for client plan assignments.
+/// Postgres-backed persistence for client plan assignments.
 /// Partition key: "client", document id: "{clientAppId}:{tenantId}".
 /// </summary>
-public sealed class CosmosClientRepository : CosmosRepositoryBase<ClientPlanAssignment>
+public sealed class PostgresClientRepository : PostgresRepositoryBase<ClientPlanAssignment>
 {
-    public CosmosClientRepository(ConfigurationContainerProvider provider, ILogger<CosmosClientRepository> logger)
+    public PostgresClientRepository(PostgresDocumentStore provider, ILogger<PostgresClientRepository> logger)
         : base(provider, "client", logger) { }
 
-    protected override void PrepareForCosmos(ClientPlanAssignment entity)
+    protected override void PrepareEntity(ClientPlanAssignment entity)
     {
         entity.Id = $"{entity.ClientAppId}:{entity.TenantId}";
         entity.PartitionKey = "client";

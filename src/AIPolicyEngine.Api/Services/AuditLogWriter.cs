@@ -7,7 +7,7 @@ namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
 /// Background service that reads audit log items from an in-process channel
-/// and writes them to Cosmos DB in batches for optimal throughput.
+/// and writes them to Postgres DB in batches for optimal throughput.
 /// </summary>
 public sealed class AuditLogWriter : BackgroundService
 {
@@ -155,21 +155,21 @@ public sealed class AuditLogWriter : BackgroundService
                 await _auditStore.WriteBatchAsync(documents, ct);
                 await _auditStore.UpsertBillingSummariesAsync(batch, ct);
 
-                _logger.LogInformation("Flushed {Count} audit items to Cosmos DB", batch.Count);
+                _logger.LogInformation("Flushed {Count} audit items to Postgres DB", batch.Count);
                 return;
             }
             catch (Exception ex) when (attempt < MaxRetries)
             {
                 var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
                 _logger.LogWarning(ex,
-                    "Cosmos write failed (attempt {Attempt}/{Max}), retrying in {Delay}s",
+                    "Postgres write failed (attempt {Attempt}/{Max}), retrying in {Delay}s",
                     attempt, MaxRetries, delay.TotalSeconds);
                 await Task.Delay(delay, ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Cosmos write failed after {Max} attempts, dropping {Count} items",
+                    "Postgres write failed after {Max} attempts, dropping {Count} items",
                     MaxRetries, batch.Count);
             }
         }
@@ -179,7 +179,7 @@ public sealed class AuditLogWriter : BackgroundService
     /// Generates a deterministic document ID from the audit item's identity fields.
     /// Same input always produces the same ID, making retries idempotent.
     /// </summary>
-    private static string GenerateDeterministicId(AuditLogItem item)
+    internal static string GenerateDeterministicId(AuditLogItem item)
     {
         var input = $"{item.ClientAppId}|{item.TenantId}|{item.DeploymentId}|{item.Timestamp:O}|{item.TotalTokens}|{item.PromptTokens}|{item.CorrelationId}";
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));

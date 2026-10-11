@@ -3,12 +3,12 @@ using AIPolicyEngine.Api.Models;
 namespace AIPolicyEngine.Api.Services;
 
 /// <summary>
-/// Durable audit store backed by Cosmos DB for financial record-keeping and export.
+/// Durable audit store backed by Postgres DB for financial record-keeping and export.
 /// </summary>
 public interface IAuditStore
 {
     /// <summary>
-    /// Write a batch of audit log documents to Cosmos DB.
+    /// Write a batch of audit log documents to Postgres DB.
     /// </summary>
     Task WriteBatchAsync(IReadOnlyList<AuditLogDocument> documents, CancellationToken ct = default);
 

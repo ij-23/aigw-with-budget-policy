@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Azure.Cosmos;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,7 +54,7 @@ internal sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSche
 
 /// <summary>
 /// Custom WebApplicationFactory that replaces real Redis with an in-memory FakeRedis
-/// and stubs Cosmos DB with a no-op IAuditStore for unit tests.
+/// and stubs Postgres DB with a no-op IAuditStore for unit tests.
 /// </summary>
 public sealed class ChargebackApiFactory : WebApplicationFactory<Program>
 {
@@ -71,8 +71,8 @@ public sealed class ChargebackApiFactory : WebApplicationFactory<Program>
             {
                 // Provide a dummy connection string so Aspire doesn't throw on missing config
                 ["ConnectionStrings:redis"] = "localhost:99999,abortConnect=false,connectTimeout=1",
-                // Dummy Cosmos connection for testing
-                ["ConnectionStrings:aipolicy"] = "AccountEndpoint=https://localhost:8081/;AccountKey=dGVzdA==",
+                // Dummy Postgres connection for testing
+                ["ConnectionStrings:aipolicy"] = "Host=localhost;Database=aipolicy;Username=test;Password=test",
                 // Disable AzureAd auth in tests
                 ["AzureAd:Instance"] = "https://login.microsoftonline.com/",
                 ["AzureAd:TenantId"] = "test-tenant",
@@ -99,11 +99,6 @@ public sealed class ChargebackApiFactory : WebApplicationFactory<Program>
             // Re-register the real LogDataService; it will use our fake IConnectionMultiplexer
             services.AddSingleton<ILogDataService, LogDataService>();
 
-            // Remove real CosmosClient registrations and replace with stub
-            RemoveService<CosmosClient>(services);
-            var mockCosmos = Substitute.For<CosmosClient>();
-            services.AddSingleton(mockCosmos);
-
             // Replace IAuditStore with a stub that returns empty collections
             RemoveService<IAuditStore>(services);
             var mockAuditStore = Substitute.For<IAuditStore>();
@@ -118,8 +113,7 @@ public sealed class ChargebackApiFactory : WebApplicationFactory<Program>
             AuditStore = mockAuditStore;
             services.AddSingleton<IAuditStore>(mockAuditStore);
 
-            // Remove Cosmos-dependent hosted services (no real Cosmos in tests)
-            RemoveHostedService<RedisToCosmosMigrationService>(services);
+            // Remove Postgres-dependent hosted services (no real Postgres in tests)
             RemoveHostedService<CacheWarmingService>(services);
 
             // Replace IRepository<T> with Redis-backed test implementations
