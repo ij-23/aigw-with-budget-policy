@@ -94,7 +94,7 @@ Names derive from `name_prefix`; the customer configuration chooses its own subs
 | Cosmos DB account, `aipolicy` database, three containers | Durable configuration, budgets, audit logs and billing summaries |
 | Key Vault and lab secrets | Bootstrap secret and test-user password storage |
 | Virtual network and two subnets | Connectivity for apps and private endpoints |
-| Cosmos and Key Vault private endpoints, NICs, DNS zones/links | Access services whose public networking is disabled |
+| Redis, Cosmos and Key Vault private endpoints, NICs, DNS zones/links | Access services whose public networking is disabled |
 | Managed identities and RBAC grants | App image pull, Cosmos data access, model discovery and APIM inference without embedded service credentials |
 | Log Analytics, Application Insights and diagnostics | Application and infrastructure troubleshooting; budget data is viewed through the engine |
 | Azure-created environment infrastructure | Container Apps may create a separate managed resource group containing ingress networking |
