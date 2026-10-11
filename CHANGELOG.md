@@ -1,6 +1,10 @@
 # Internal changelog
 
 
+### 2026-10-11 — Fix Key Vault teardown lifecycle
+- Provision ARM secrets using a PUT action so destroying an owned vault does not attempt unsupported secret DELETE operations.
+- Document that secrets written into an existing vault remain under customer ownership after teardown.
+
 ### 2026-10-11 — PostgreSQL budget POC and Sweden Central defaults
 - Replaced Cosmos SDK, repositories, audit store and budget batches with Npgsql and PostgreSQL transactions.
 - Added SQL schema, tenant advisory locking and real database tests for concurrency, rollback, isolation and audit retry deduplication.

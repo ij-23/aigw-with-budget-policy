@@ -125,3 +125,5 @@ terraform -chdir=iac apply destroy.tfplan
 ```
 
 This deletes Terraform-managed resources and financial data; export any required evidence first. Existing parent services referenced with reuse flags remain, while child resources and grants owned by this state are removed. Verify that the plan matches the intended environment. Do not delete a resource group as a shortcut.
+
+Terraform provisions lab secrets with an ARM PUT action because the ARM secret resource does not support DELETE. Destroying the newly created vault removes its secrets with the vault; when using an existing vault, these written lab secrets remain in that vault and require customer-managed cleanup.

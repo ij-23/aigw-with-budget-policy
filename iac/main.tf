@@ -251,18 +251,22 @@ resource "azurerm_api_management_api_policy" "budget" {
 
 # ARM secret deployment keeps setup compatible with vaults that disallow public data-plane access.
 # Values are sensitive and live only in ignored Terraform state and the vault.
-resource "azapi_resource" "lab_secret" {
-  for_each  = var.store_lab_credentials_in_key_vault ? toset(concat(["bootstrap-client-secret"], var.create_test_user ? ["test-user-password"] : [])) : toset([])
-  type      = "Microsoft.KeyVault/vaults/secrets@2023-07-01"
-  name      = each.key
-  parent_id = module.vault.id
+# ARM secrets support PUT but not DELETE. The owned vault is the deletion boundary.
+# When reusing a vault, secrets written by the lab remain in that existing vault.
+removed {
+  from = azapi_resource.lab_secret
+  lifecycle { destroy = false }
+}
+resource "azapi_resource_action" "lab_secret" {
+  for_each    = var.store_lab_credentials_in_key_vault ? toset(concat(["bootstrap-client-secret"], var.create_test_user ? ["test-user-password"] : [])) : toset([])
+  type        = "Microsoft.KeyVault/vaults/secrets@2023-07-01"
+  resource_id = "${module.vault.id}/secrets/${each.key}"
+  method      = "PUT"
   body = {
     properties = {
       value      = each.key == "bootstrap-client-secret" ? local.admin_client_secret : random_password.test_user[0].result
       attributes = { enabled = true }
     }
   }
-  # The ARM read response intentionally omits secret values; preserve their configured state.
-  ignore_missing_property = true
-  response_export_values  = []
+  response_export_values = []
 }
