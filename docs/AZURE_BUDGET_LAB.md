@@ -1,6 +1,6 @@
 # Azure $50 budget lab
 
-This lab deploys the dashboard, policy engine, APIM gateway, Foundry account and project, one pinned GPT-4.1-mini deployment, Cosmos DB, password-protected internal Redis, ACR, Key Vault, Log Analytics, Application Insights and Entra applications. Terraform under [iac](../iac) owns the infrastructure. This is the sole supported deployment path in this repository. See [the solution guide](SOLUTION.md) for architecture and scope.
+This lab deploys the dashboard, policy engine, APIM gateway, Foundry account and project, one pinned GPT-4.1-mini deployment, Cosmos DB, Azure Managed Redis with private networking and Entra authentication, ACR, Key Vault, Log Analytics, Application Insights and Entra applications. Terraform under [iac](../iac) owns the infrastructure. This is the sole supported deployment path in this repository. See [the solution guide](SOLUTION.md) for architecture and scope.
 
 ## Prerequisites
 
@@ -49,7 +49,13 @@ All create flags default to `true`. Set a flag to `false` and supply its existin
 
 The default deployment uses a VNet-connected Consumption workload profile environment and a Cosmos SQL private endpoint with private DNS. Cosmos and Key Vault public access are disabled. Key Vault has a private endpoint and DNS; Terraform stores credentials through the ARM secret-deployment API, so local deployment does not require vault data-plane network access. Set `store_lab_credentials_in_key_vault=false` to retain credentials only in sensitive, ignored Terraform state. Secret retrieval from the vault requires connectivity to its VNet. Set `container_workload_profile_name=null` for an existing legacy Consumption-only environment, or supply its workload profile name. An existing Container Apps environment must have network and DNS access to the supplied Cosmos endpoint. Changing the network type of an existing environment requires Terraform replacement.
 
-Redis is a small internal Container App used for caching, rate controls and recent analytics, not a managed production Redis service. Budget spending is durable in Cosmos and survives Redis restarts. Use `create_redis=false` for an existing managed Redis service.
+Redis is Azure Managed Redis with a private endpoint, TLS and engine managed identity data access. `create_redis=true` creates it by default; `create_redis=false` creates no cache infrastructure and requires `existing_redis_connection_string`. The engine cannot currently run without Redis. Existing caches need engine data access and network/DNS reachability. Budget spending is durable in Cosmos and survives cache replacement.
+
+SKU availability is subscription- and region-dependent. `redis_location` overrides only the cache location; its private endpoint remains beside the engine. If Azure returns a subscription/SKU restriction or capacity error, choose an approved SKU/region or bring an existing cache.
+
+The default `redis_sku_name="Balanced_B0"` and `redis_high_availability_enabled=false` target POC cost. Set high availability to true for replicas. Use `create_redis_private_dns_zone=false` with `existing_redis_private_dns_zone_id` to reuse a DNS zone; avoid duplicate VNet links. See [Architecture and flow](ARCHITECTURE.md) for component and sequence diagrams.
+
+When upgrading a previously deployed container-based lab, Terraform removes the old Redis Container App/password and switches the engine to Managed Redis. Cached counters and recent activity reset; the financial ledger remains in Cosmos. Provision the new cache and its connectivity before the full migration apply to reduce interruption. Inspect the plan before applying it.
 
 Existing Cosmos accounts need `aipolicy` and containers `configuration` (`/partitionKey`), `audit-logs` and `billing-summaries` (`/customerKey`). `create_cosmos_schema` follows `create_cosmos` by default, so existing schemas are reused without import or management. Set `create_cosmos_schema=true` when an existing account needs a new lab schema. An existing account must have one write region. Financial ledger/configuration documents must not expire.
 

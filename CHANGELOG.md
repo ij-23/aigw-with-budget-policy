@@ -1,5 +1,11 @@
 # Internal changelog
 
+### 2026-10-11 — Managed Redis and architecture
+
+- Replaced the Redis Container App with optional creation of Azure Managed Redis, private networking, Entra data access, diagnostics and configurable SKU/high availability.
+- Reject missing existing Redis connections when cache creation is disabled; document that the engine still requires Redis.
+- Added component and numbered request-flow diagrams, $50 accounting example and dashboard guidance in docs/ARCHITECTURE.md.
+
 ### 2026-10-11 — Customer POC repository
 
 - Removed alternative deployment stacks, obsolete scripts/docs, unrelated policy templates, demo and benchmark/load-test projects, and root agent-tooling dependencies.

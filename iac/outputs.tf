@@ -29,3 +29,6 @@ output "foundry_endpoint" { value = module.foundry.endpoint }
 output "key_vault_name" { value = module.vault.name }
 output "cosmos_id" { value = module.cosmos.id }
 output "rendered_policy" { value = local.rendered_policy }
+
+output "redis_resource_id" { value = module.cache.id }
+output "redis_hostname" { value = module.cache.hostname }

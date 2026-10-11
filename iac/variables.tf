@@ -101,7 +101,7 @@ variable "create_cosmos_schema" {
   default     = null
 }
 variable "create_redis" {
-  description = "Create an internal password-protected Redis Container App; false uses an existing Redis endpoint."
+  description = "Create Azure Managed Redis; false creates no Redis infrastructure and requires an existing Redis endpoint."
   type        = bool
   default     = true
 }
@@ -299,4 +299,35 @@ variable "container_workload_profile_name" {
   description = "Container Apps workload profile name; null for an existing legacy Consumption-only environment."
   type        = string
   default     = "Consumption"
+}
+
+variable "redis_sku_name" {
+  description = "Managed Redis SKU for the single database cache; choose a SKU supporting NoCluster. Larger SKUs require an application cluster compatibility review."
+  type        = string
+  default     = "Balanced_B0"
+  validation {
+    condition     = contains(["Balanced_B0", "Balanced_B1", "Balanced_B3", "Balanced_B5", "Balanced_B10", "ComputeOptimized_X3", "ComputeOptimized_X5", "ComputeOptimized_X10", "MemoryOptimized_M10"], var.redis_sku_name)
+    error_message = "Choose a listed small SKU supporting NoCluster (up to 25 GB)."
+  }
+}
+variable "redis_high_availability_enabled" {
+  description = "Enable Redis high availability. Default false is for POC cost; enable for resilient deployments."
+  type        = bool
+  default     = false
+}
+variable "create_redis_private_dns_zone" {
+  description = "Create privatelink.redis.azure.net when creating Redis; false uses existing_redis_private_dns_zone_id."
+  type        = bool
+  default     = true
+}
+variable "existing_redis_private_dns_zone_id" {
+  description = "Existing Redis private DNS zone ARM ID; Terraform adds a VNet link. Do not duplicate an existing link."
+  type        = string
+  default     = ""
+}
+
+variable "redis_location" {
+  description = "Optional Managed Redis region override for subscription availability. Null uses location; cross-region cache traffic adds latency."
+  type        = string
+  default     = null
 }

@@ -50,14 +50,21 @@ module "hosting" {
   log_analytics_id        = module.monitoring.workspace_id
 }
 module "cache" {
-  workload_profile_name      = var.container_workload_profile_name
-  source                     = "./modules/cache"
-  create                     = var.create_redis
-  existing_connection_string = var.existing_redis_connection_string
-  environment_id             = module.hosting.environment_id
-  resource_group_name        = local.resource_group_name
-  name_prefix                = var.name_prefix
-  tags                       = var.tags
+  source                       = "./modules/cache"
+  create                       = var.create_redis
+  existing_connection_string   = var.existing_redis_connection_string
+  location                     = var.location
+  log_analytics_id             = module.monitoring.workspace_id
+  cache_location               = coalesce(var.redis_location, var.location)
+  sku_name                     = var.redis_sku_name
+  high_availability_enabled    = var.redis_high_availability_enabled
+  vnet_id                      = module.networking.vnet_id
+  endpoint_subnet_id           = module.networking.endpoints_subnet_id
+  create_private_dns_zone      = var.create_redis_private_dns_zone
+  existing_private_dns_zone_id = var.existing_redis_private_dns_zone_id
+  resource_group_name          = local.resource_group_name
+  name_prefix                  = var.name_prefix
+  tags                         = var.tags
 }
 module "cosmos" {
   create_private_endpoint      = var.create_cosmos_private_endpoint
@@ -134,6 +141,8 @@ module "engine" {
   registry_server                = module.hosting.registry_server
   container_image                = var.container_image
   redis_connection_string        = module.cache.connection_string
+  create_redis_access_assignment = var.create_redis
+  managed_redis_id               = module.cache.id
   cosmos_endpoint                = module.cosmos.endpoint
   app_insights_connection_string = module.monitoring.connection_string
   tenant_id                      = var.tenant_id

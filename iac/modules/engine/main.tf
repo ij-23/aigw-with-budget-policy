@@ -11,6 +11,12 @@ resource "azurerm_role_assignment" "pull" {
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.engine[0].principal_id
 }
+# Grant cache data access before starting the engine with its managed identity.
+resource "azurerm_managed_redis_access_policy_assignment" "engine" {
+  count            = var.create_redis_access_assignment ? 1 : 0
+  managed_redis_id = var.managed_redis_id
+  object_id        = var.create ? azurerm_user_assigned_identity.engine[0].principal_id : (data.azurerm_container_app.existing[0].identity[0].type == "UserAssigned" ? data.azurerm_user_assigned_identity.existing[0].principal_id : data.azurerm_container_app.existing[0].identity[0].principal_id)
+}
 resource "azurerm_container_app" "engine" {
   count                        = var.create ? 1 : 0
   name                         = "${var.name_prefix}-engine"
@@ -76,7 +82,7 @@ resource "azurerm_container_app" "engine" {
       latest_revision = true
     }
   }
-  depends_on = [azurerm_role_assignment.pull]
+  depends_on = [azurerm_role_assignment.pull, azurerm_managed_redis_access_policy_assignment.engine]
   lifecycle { ignore_changes = [template[0].container[0].image] }
 }
 data "azurerm_container_app" "existing" {

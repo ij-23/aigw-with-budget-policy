@@ -19,7 +19,14 @@ location              = "eastus2"
 # existing_cosmos_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.DocumentDB/databaseAccounts/..."
 # create_cosmos_schema = false # Existing aipolicy schema; this is the default when create_cosmos=false.
 # create_redis = false
-# existing_redis_connection_string = "your-redis:6380,ssl=True,abortConnect=False"
+# existing_redis_connection_string = "your-cache.eastus2.redis.azure.net:10000,ssl=True,abortConnect=False"
+# The engine still requires Redis. This flag skips creation, it does not disable Redis use.
+# For existing Redis: grant its data access to the engine identity and provide network/DNS reachability.
+# redis_sku_name = "Balanced_B0"
+# redis_location = "eastus" # Null/default uses location; override only for cache availability.
+# redis_high_availability_enabled = true # Default false for a small POC.
+# create_redis_private_dns_zone = false
+# existing_redis_private_dns_zone_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/privateDnsZones/privatelink.redis.azure.net"
 # create_registry = false
 # existing_registry_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.ContainerRegistry/registries/..."
 # create_container_environment = false

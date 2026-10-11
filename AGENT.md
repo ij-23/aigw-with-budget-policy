@@ -7,7 +7,8 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and Cosmos/Redis 
 - Networking: VNet-connected Consumption workload profiles; Cosmos SQL and Key Vault private endpoints and DNS with public access disabled. Terraform deploys vault secrets through ARM. Bring-existing flags cover VNet, subnets, private DNS and Cosmos connectivity.
 - Repository: `ij-23/aigw-with-budget-policy`; `iac/` is the authoritative modular test infrastructure.
 - Ten infrastructure modules provide create/use-existing flags; local state and credentials are ignored.
-- New Redis is internal Container Apps cache; single-write-region Cosmos is the ledger authority.
+- Azure Managed Redis replaces the internal cache Container App; single-write-region Cosmos is the ledger authority. Redis creation is optional but the runtime requires an existing cache when creation is disabled.
+- Managed Redis uses private networking, Entra data access granted before engine startup, TLS, NoCluster and NoEviction. Balanced_B0 without HA is the POC default; SKU/HA, Redis-specific region and private DNS reuse are configurable.
 - The model-discovery ResourceIds option supports account-scoped Reader permissions.
 - The budget policy rewrites to the canonical OpenAI route to remove arbitrary APIM API suffixes.
 - Terraform stores credentials in Key Vault; lab scripts build through ACR, seed $50/month and verify real inference/settlement/blocking.
@@ -35,7 +36,7 @@ src/
 - Only Terraform under iac is supported for cloud provisioning; legacy stacks/scripts and unrelated demos are removed.
 - Only the Entra USD-budget policy is shipped. Access, routing and analytics services remain dependencies of its precheck/log flow.
 - Configure-lab generates private inputs without overwriting state/configuration. Deploy-lab finishes after readiness and setup; device-code E2E is separate.
-- Customer architecture is in docs/SOLUTION.md. No live tenant/account details belong in public guides.
+- Customer architecture and numbered flow are in docs/ARCHITECTURE.md; solution detail is in docs/SOLUTION.md. No live tenant/account details belong in public guides.
 
 ## Budget decisions
 

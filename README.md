@@ -4,7 +4,7 @@ A deployable proof of concept that gives an AI consumer a weekly or monthly USD 
 
 APIM authenticates callers and requests authorization from a policy engine. Cosmos DB holds durable reservations and spending records; Redis supports existing access checks, rate counters and recent activity. The administrator dashboard shows policies, assignments, balances and pending reservations.
 
-**Supported:** Entra-authenticated, non-streaming, text Chat Completions with one response and an explicit output cap. This is a POC, not a production certification or an Azure invoice spending cap. Read the [solution explanation](docs/SOLUTION.md) for the request flow, resource purposes and limitations.
+**Supported:** Entra-authenticated, non-streaming, text Chat Completions with one response and an explicit output cap. This is a POC, not a production certification or an Azure invoice spending cap. Read the [architecture and flow](docs/ARCHITECTURE.md) and [solution explanation](docs/SOLUTION.md) for the request flow, resource purposes and limitations.
 
 ## Deploy a customer POC
 
@@ -45,7 +45,7 @@ Open the dashboard URL printed by deployment, sign in as the configured administ
 
 ## What is deployed
 
-APIM, a Foundry account/project/model, the policy engine and Redis Container Apps, their VNet-connected environment, ACR, Cosmos, Key Vault, private endpoints/DNS, managed identities, Entra applications/test user and monitoring. Platforms default to creation; `create_*` flags and `existing_*` inputs support reuse. Existing services must satisfy the documented identity, schema and network prerequisites; setting a flag does not configure an existing service automatically.
+APIM, a Foundry account/project/model, the policy engine Container App, Azure Managed Redis, the VNet-connected hosting environment, ACR, Cosmos, Key Vault, private endpoints/DNS, managed identities, Entra applications/test user and monitoring. Platforms default to creation; `create_*` flags and `existing_*` inputs support reuse. Redis creation is optional: `create_redis=false` requires a reachable existing Redis connection. Running the engine without Redis is not supported. The default managed cache uses a private endpoint, TLS and managed identity; `redis_sku_name` and `redis_high_availability_enabled` control its size and replicas. Existing services must satisfy the documented identity, schema and network prerequisites; setting a flag does not configure an existing service automatically.
 
 ## Repository structure
 

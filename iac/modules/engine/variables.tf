@@ -77,3 +77,13 @@ variable "workload_profile_name" {
   description = "Workload profile name; null for legacy Consumption-only environments."
   type        = string
 }
+
+variable "create_redis_access_assignment" {
+  description = "Grant the engine identity access to the newly created Managed Redis before starting the app."
+  type        = bool
+}
+variable "managed_redis_id" {
+  description = "Created Managed Redis ARM ID, or null for an existing externally configured cache."
+  type        = string
+  nullable    = true
+}

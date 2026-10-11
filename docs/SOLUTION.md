@@ -8,12 +8,14 @@ The allowance is monetary. Model token counts are used to calculate cost, rather
 
 ## Architecture and request flow
 
+See [Architecture](ARCHITECTURE.md) for the component diagram, numbered flow, Redis deployment options and $50 example.
+
 ```mermaid
 sequenceDiagram
     participant U as User / client
     participant A as APIM
     participant E as Policy engine
-    participant R as Redis
+    participant R as Azure Managed Redis
     participant C as Cosmos DB
     participant F as Foundry model
     U->>A: Text chat request with delegated Entra token
@@ -86,8 +88,8 @@ Names derive from `name_prefix`; the customer configuration chooses its own subs
 | Foundry project | Project container for the POC; can be skipped when reusing an account |
 | GPT-4.1-mini model deployment | Default inference workload, alias `budget-chat` |
 | Policy engine Container App | ASP.NET backend and React administrator dashboard |
-| Internal Redis Container App | Cache, rate counters, recent traces and legacy usage coordination; not the financial authority |
-| Container Apps environment | VNet-connected Consumption hosting for both apps |
+| Azure Managed Redis (creation optional) | Managed cache, rate counters, recent traces and legacy usage coordination; private endpoint, TLS and engine Entra data access |
+| Container Apps environment | VNet-connected Consumption hosting for the engine |
 | Azure Container Registry | Remote image build and private image storage |
 | Cosmos DB account, `aipolicy` database, three containers | Durable configuration, budgets, audit logs and billing summaries |
 | Key Vault and lab secrets | Bootstrap secret and test-user password storage |
@@ -117,7 +119,7 @@ Supported requests are non-streaming text Chat Completions, one completion and e
 
 The POC includes existing access/routing/analytics code because the budget policy uses those services. Other administrator screens may expose those supporting features. Their legacy pricing is separate from the approved **Budgets** price book.
 
-Default Redis is a small single-instance cache, not a highly available managed Redis deployment. Use existing-service flags for production infrastructure. Budget administration uses the application's global admin role, not per-tenant delegated admin isolation. One tenant partition serializes financial updates: load-test contention, partition capacity and ledger growth before production. Archive and recovery designs must preserve duplicate protection and active financial records.
+Default Azure Managed Redis is a small Balanced_B0 instance with high availability disabled for POC cost. Enable replicas using `redis_high_availability_enabled=true`. `create_redis=false` requires an existing reachable Redis service; running with no Redis is not supported. See [architecture and request flow](ARCHITECTURE.md) for diagrams and cache configuration. Budget administration uses the application's global admin role, not per-tenant delegated admin isolation. One tenant partition serializes financial updates: load-test contention, partition capacity and ledger growth before production. Archive and recovery designs must preserve duplicate protection and active financial records.
 
 Only the protected APIM routes should be reachable by model consumers; restrict direct model access and audit inherited/operation policies. Review model price changes, request bounds, identity permissions, monitoring, retention and reconciliation procedures for a production rollout. Financial state must be protected and backed up.
 
