@@ -43,6 +43,8 @@ Use the newly displayed device code and the configured test account; complete MF
 
 Open the dashboard URL printed by deployment, sign in as the configured administrator, enter the tenant ID and select **Load budgets**. [Deployment and testing](docs/AZURE_BUDGET_LAB.md) covers permissions, reuse flags, viewing results, troubleshooting and cleanup.
 
+PostgreSQL defaults to the small burstable B1ms size. If the region rejects that allocation, set `postgresql_sku_name` to an available alternative in your private variable file; see [PostgreSQL deployment notes](docs/POSTGRESQL.md).
+
 ## What is deployed
 
 APIM, a Foundry account/project/model, the policy engine Container App, Azure Managed Redis, the VNet-connected hosting environment, ACR, PostgreSQL, Key Vault, private endpoints/DNS, managed identities, Entra applications/test user and monitoring. Platforms default to creation; `create_*` flags and `existing_*` inputs support reuse. Redis creation is optional: `create_redis=false` requires a reachable existing Redis connection. Running the engine without Redis is not supported. The default managed cache uses a private endpoint, TLS and managed identity; `redis_sku_name` and `redis_high_availability_enabled` control its size and replicas. Existing services must satisfy the documented identity, schema and network prerequisites; setting a flag does not configure an existing service automatically.

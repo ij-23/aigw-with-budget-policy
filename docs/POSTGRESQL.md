@@ -2,6 +2,8 @@
 
 The POC uses Azure Database for PostgreSQL Flexible Server. A single `aipolicy` database stores the application data. Terraform defaults to `B_Standard_B1ms`, 32 GiB storage, seven-day backups, no high availability, and Sweden Central. Private endpoint networking keeps public database access disabled.
 
+If Azure returns `RegionalAllocationFailed`, choose another available compute size through `postgresql_sku_name` and retry Terraform. For example, `GP_Standard_D2ds_v5` uses a different compute family from the burstable default and costs more. SKU catalog availability does not guarantee live capacity. Azure selects the availability zone; Terraform preserves that placement on subsequent applies.
+
 ## Schema
 
 The application applies [001_initial.sql](../src/AIPolicyEngine.Api/Database/001_initial.sql) on startup under a database advisory lock. Creating or reusing a database requires a database user with schema creation and CRUD privileges.

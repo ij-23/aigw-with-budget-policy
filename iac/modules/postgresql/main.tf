@@ -16,6 +16,8 @@ resource "azurerm_postgresql_flexible_server" "lab" {
   backup_retention_days         = 7
   public_network_access_enabled = false
   tags                          = var.tags
+  # Azure chooses the available zone when none is requested. Preserve that placement.
+  lifecycle { ignore_changes = [zone] }
 }
 resource "azurerm_postgresql_flexible_server_database" "lab" {
   count     = var.create ? 1 : 0

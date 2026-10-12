@@ -53,3 +53,5 @@ User setup: [USD budgets](docs/USD_BUDGETS.md). Dated history: [changelog](CHANG
 - All new regional services default to swedencentral. PostgreSQL defaults to B_Standard_B1ms, 32 GiB storage and seven-day backups, with private endpoint networking and public access disabled. POC database password auth is explicit; least-privilege managed identity DB auth is future hardening. Application startup applies Database/001_initial.sql under a schema advisory lock.
 
 Terraform provisions lab secrets with an ARM PUT action because the ARM secret resource does not support DELETE. Destroying the newly created vault removes its secrets with the vault; when using an existing vault, these written lab secrets remain in that vault and require customer-managed cleanup.
+
+PostgreSQL preserves the Azure-selected availability zone with lifecycle ignore_changes to prevent perpetual zone-removal drift. RegionalAllocationFailed is handled through a customer-selected SKU override; repository defaults stay B1ms.

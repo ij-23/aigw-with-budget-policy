@@ -1,5 +1,9 @@
 # Internal changelog
 
+### 2026-10-11 — Verify PostgreSQL Azure deployment
+- Preserve the Azure-selected PostgreSQL availability zone to prevent drift after creation.
+- Document compute-family overrides for regional capacity failures without changing the POC default.
+
 
 ### 2026-10-11 — Fix Key Vault teardown lifecycle
 - Provision ARM secrets using a PUT action so destroying an owned vault does not attempt unsupported secret DELETE operations.
