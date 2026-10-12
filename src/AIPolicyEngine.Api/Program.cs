@@ -281,5 +281,5 @@ app.MapFallbackToFile("index.html").AllowAnonymous();
 
 app.Run();
 
-// Make Program visible to benchmarks and tests
+// Make Program visible to integration tests
 public partial class Program { }

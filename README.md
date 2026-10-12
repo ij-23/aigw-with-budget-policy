@@ -6,6 +6,19 @@ APIM authenticates callers and requests authorization from a policy engine. Post
 
 **Supported:** Entra-authenticated, non-streaming, text Chat Completions with one response and an explicit output cap. This is a POC, not a production certification or an Azure invoice spending cap. Read the [architecture and flow](docs/ARCHITECTURE.md) and [solution explanation](docs/SOLUTION.md) for the request flow, resource purposes and limitations.
 
+## Understand the solution
+
+![AI gateway solution architecture](docs/diagrams/architecture.drawio.png)
+
+| Guide | Use it for |
+|---|---|
+| [Solution](docs/SOLUTION.md) | Customer explanation, resource purposes and POC limits |
+| [Architecture and flow](docs/ARCHITECTURE.md) | Component diagram, request flow and editable draw.io files |
+| [Deployment](docs/AZURE_BUDGET_LAB.md) | Create or reuse Azure services and remove the environment |
+| [Interactive test](docs/INTERACTIVE_TEST.md) | Sign in as the test user, observe spending and demonstrate blocking |
+| [Budget operations](docs/USD_BUDGETS.md) | User/group policies, prices, API contracts and reconciliation |
+| [PostgreSQL](docs/POSTGRESQL.md) | Schema, transaction guarantees and database configuration |
+
 ## Deploy a customer POC
 
 | Prerequisite | Requirement |
@@ -53,6 +66,7 @@ APIM, a Foundry account/project/model, the policy engine Container App, Azure Ma
 
 ```text
 docs/                         Customer solution, deployment and budget guides
+  diagrams/                   Editable draw.io sources and PNG previews
 iac/                          Authoritative Terraform and example configuration
   modules/                    Ten platform modules
 policies/templates/           Entra USD-budget policy and its manifest
@@ -65,7 +79,7 @@ src/
   aipolicyengine-ui/           React administrator dashboard
 ```
 
-The application retains access-plan, routing and analytics services used by the budget flow. Only the USD-budget APIM template is shipped. Alternative deployment stacks, unrelated policy templates, demos and benchmark projects have been removed.
+The application retains access-plan, routing and analytics services used by the budget flow. Only the USD-budget APIM template is shipped.
 
 ## Development and handling deployment state
 

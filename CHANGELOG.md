@@ -1,5 +1,12 @@
 # Internal changelog
 
+### 2026-10-12 — Customer documentation and editable diagrams
+
+- Added editable draw.io architecture and request-flow diagrams with PNG previews, including budget rejection and pending reconciliation.
+- Added a customer guide index, synchronized repository structure, and consolidated repeated Mermaid flows into the architecture guide.
+- Removed unused React/Vite logo assets and the unrelated weather-forecast HTTP sample; removed the scaffold favicon reference and updated the dashboard title.
+- Replaced stale configuration-container wording and retired cache-migration instructions with current PostgreSQL and Redis behavior.
+
 ### 2026-10-11 — Verify PostgreSQL Azure deployment
 - Preserve the Azure-selected PostgreSQL availability zone to prevent drift after creation.
 - Document compute-family overrides for regional capacity failures without changing the POC default.

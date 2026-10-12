@@ -4,85 +4,19 @@ This POC gives an Entra user or group a weekly or monthly allowance, such as **$
 
 ## Solution architecture
 
-```mermaid
-flowchart TB
-    user["Test user / AI application"]
-    admin["Budget administrator"]
-    entra["Microsoft Entra ID\nUser tokens, groups and application roles"]
-    apim["Azure API Management\nValidate JWT · precheck · reserve · settle"]
-    foundry["Microsoft Foundry\nApproved model deployment"]
-    subgraph vnet["Virtual network"]
-        subgraph apps["Container Apps subnet"]
-            engine["Policy engine + administrator dashboard\nAzure Container App · managed identity"]
-        end
-        subgraph endpoints["Private endpoints subnet"]
-            rpe["Redis private endpoint"]
-            cpe["PostgreSQL private endpoint"]
-            kpe["Key Vault private endpoint"]
-        end
-    end
-    redis["Azure Managed Redis\nAccess cache · rate counters · recent activity"]
-    postgresql["PostgreSQL\nPolicies · assignments · prices\nUSD reservations and durable spending"]
-    kv["Key Vault\nLab bootstrap credentials"]
-    acr["Azure Container Registry\nPolicy engine image"]
-    monitor["Azure Monitor\nLog Analytics + Application Insights"]
-    user -->|Sign in| entra
-    user -->|Bearer token + text chat request| apim
-    apim -->|Gateway managed identity · HTTPS| engine
-    apim -->|Gateway managed identity · allowed request| foundry
-    admin -->|Entra sign in · HTTPS| engine
-    engine -->|TLS · engine managed identity| rpe
-    rpe --> redis
-    engine -->|TLS · database credential secret| cpe
-    cpe --> postgresql
-    kpe --> kv
-    engine -.->|Managed identity pulls image| acr
-    engine -.->|Application telemetry| monitor
-    apim -.->|Gateway diagnostics| monitor
-    foundry -.->|Model diagnostics| monitor
-    redis -.->|Metrics + connection events| monitor
-    postgresql -.->|Data-plane diagnostics| monitor
-```
+![Solution architecture](diagrams/architecture.drawio.png)
+
+[Open the editable architecture](diagrams/architecture.drawio). Solid arrows show request, identity and storage calls; the dashed administrator sign-in arrow shows identity setup. The bottom row lists supporting services that are not part of each budget decision.
 
 Private DNS zones resolve the Redis, PostgreSQL and Key Vault hostnames to their private endpoints. APIM and the engine expose HTTPS endpoints in this POC; caller and gateway authorization protect the application. Foundry's model endpoint is reached by APIM with its managed identity. Key Vault supports lab provisioning; it is not called for every inference request. Terraform writes lab credentials through the ARM control plane, while their data-plane retrieval requires private connectivity.
 
 ## What happens for one request
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Test user
-    participant A as APIM
-    participant E as Policy engine
-    participant R as Azure Managed Redis
-    participant C as PostgreSQL
-    participant F as Foundry model
-    U->>A: JWT + non-streaming text chat + output cap
-    A->>A: Validate issuer, audience, user and groups
-    A->>E: Precheck application access, routing and rate limits
-    E->>R: Read cached access configuration and rate counters
-    opt Configuration cache miss
-        E->>C: Read configuration
-        E->>R: Populate configuration cache
-    end
-    A->>E: Reserve dollars for validated user / groups
-    E->>C: Read allowances and prices, then atomically reserve maximum cost
-    alt Allowance cannot cover spent + reserved + maximum
-        C-->>E: Deny reservation
-        E-->>A: budget_exceeded
-        A-->>U: HTTP 429 - no model call
-    else Reservation accepted
-        C-->>E: Reservation ID and immutable price snapshot
-        E-->>A: Authorized
-        A->>F: One model call with gateway managed identity
-        F-->>A: Text response and actual token usage
-        A->>E: Settle reservation using actual usage
-        E->>C: Record actual cost and release unused reservation
-        E-->>A: Settlement result
-        A-->>U: Model response
-    end
-    Note over E,C: Uncertain model outcomes keep funds reserved until verified reconciliation
-```
+![Request authorization and settlement flow](diagrams/request-flow.drawio.png)
+
+[Open the editable request flow](diagrams/request-flow.drawio). Follow steps 1–8; the side branches show budget rejection, ledger unavailability and pending reconciliation. Backend timeouts retain the reservation and return an APIM error carrying the budget request ID; successful outbound responses also carry settlement status.
+
+The admission check and reservation commit happen in one PostgreSQL transaction. APIM only invokes the model after the commit succeeds.
 
 APIM uses separate calls for access precheck, dollar authorization and settlement. Redis is contacted during the precheck and supporting cache/activity operations. Every request reaching dollar authorization contacts PostgreSQL, even with a warm Redis cache. Successful responses trigger a second PostgreSQL accounting operation. The dollar ledger does not rely on Redis counters, cache TTLs or distributed locks.
 

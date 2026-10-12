@@ -8,39 +8,7 @@ The allowance is monetary. Model token counts are used to calculate cost, rather
 
 ## Architecture and request flow
 
-See [Architecture](ARCHITECTURE.md) for the component diagram, numbered flow, Redis deployment options and $50 example.
-
-```mermaid
-sequenceDiagram
-    participant U as User / client
-    participant A as APIM
-    participant E as Policy engine
-    participant R as Azure Managed Redis
-    participant C as PostgreSQL
-    participant F as Foundry model
-    U->>A: Text chat request with delegated Entra token
-    A->>A: Validate tenant, audience and JWT
-    A->>E: Access and routing precheck
-    E->>R: Cached access configuration and rate counters
-    Note over E,C: Access-cache misses may also read PostgreSQL
-    E-->>A: Approved backend and deployment
-    A->>E: Reserve funds for authenticated consumer
-    E->>C: Read policies, balances and request ID
-    alt Insufficient budget
-        E-->>A: 429 budget_exceeded
-        A-->>U: Reject without model inference
-    else Funds available
-        E->>C: Atomic balance and reservation commit
-        E-->>A: Authorize one bounded inference
-        A->>F: Model call using managed identity
-        F-->>A: Response with actual token usage
-        A->>E: Settle usage against reserved price snapshot
-        E->>C: Record spending and release unused reservation
-        A->>E: Separate asynchronous analytics ingestion
-        E->>R: Recent traces and usage counters
-        A-->>U: Response with budget tracking headers
-    end
-```
+See [Architecture and request flow](ARCHITECTURE.md) for rendered diagrams, editable draw.io sources, Redis deployment options and a $50 accounting example.
 
 The user signs in through Entra, including MFA when required. APIM extracts identity from the validated token, not caller-supplied identity headers. APIM authenticates its calls to the engine using managed identity and the `AIPolicy.Apim` app role. It invokes the approved Foundry endpoint using a separate Azure RBAC grant to its managed identity.
 

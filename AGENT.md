@@ -18,25 +18,26 @@ ASP.NET policy engine with a React dashboard, APIM enforcement and PostgreSQL/Re
 ## Project structure
 
 ```text
-docs/
-iac/
-  modules/
-policies/templates/
-scripts/lab/
+docs/                         Customer solution, deployment and budget guides
+  diagrams/                   Editable draw.io sources and PNG previews
+iac/                          Authoritative Terraform and example configuration
+  modules/                    Ten platform modules
+policies/templates/           Entra USD-budget policy and its manifest
+scripts/lab/                  Configure, deploy, build and test commands
 src/
-  AIPolicyEngine.Api/
-  AIPolicyEngine.ServiceDefaults/
-  AIPolicyEngine.AppHost/
-  AIPolicyEngine.Tests/
-  aipolicyengine-ui/
+  AIPolicyEngine.Api/          Policy engine API and services
+  AIPolicyEngine.ServiceDefaults/ Shared hosting and telemetry
+  AIPolicyEngine.AppHost/      Optional local Aspire development host
+  AIPolicyEngine.Tests/        Backend and policy tests
+  aipolicyengine-ui/           React administrator dashboard
 ```
 
 ## Customer POC scope
 
-- Only Terraform under iac is supported for cloud provisioning; legacy stacks/scripts and unrelated demos are removed.
+- Only Terraform under `iac/` is supported for cloud provisioning.
 - Only the Entra USD-budget policy is shipped. Access, routing and analytics services remain dependencies of its precheck/log flow.
 - Configure-lab generates private inputs without overwriting state/configuration. Deploy-lab finishes after readiness and setup; device-code E2E is separate.
-- Customer architecture and numbered flow are in docs/ARCHITECTURE.md; solution detail is in docs/SOLUTION.md. No live tenant/account details belong in public guides.
+- Customer architecture and numbered flow are in [Architecture](docs/ARCHITECTURE.md); editable sources and embedded PNG previews live in `docs/diagrams/`. [Solution](docs/SOLUTION.md) explains resource purposes; [Interactive test](docs/INTERACTIVE_TEST.md) is the test runbook. Keep diagrams and these guides aligned with the APIM template and Terraform. No live tenant/account details belong in public guides.
 
 ## Budget decisions
 

@@ -2,11 +2,11 @@
 
 The **Budgets** dashboard and **Entra JWT — AI USD budget (text chat)** APIM template add weekly and monthly dollar allowances across approved model deployments. An administrator can assign a $50 monthly allowance to a user, application, or group. Group assignments explicitly choose **Per member** or **Shared by group**.
 
-This is the first implementation: **non-streaming, text-only Chat Completions**, one completion per request. Streaming, Responses, image/audio, tools, Keycloak and subscription-key budget templates are not supported yet. Unsupported requests are rejected before inference. Existing templates keep their existing behavior until replaced with the budget template.
+This is the first implementation: **non-streaming, text-only Chat Completions**, one completion per request. Streaming, Responses, image/audio, tools, Keycloak and subscription-key budget templates are not supported yet. Unsupported requests are rejected before inference. An existing APIM deployment must use the shipped budget template to enforce dollar allowances.
 
 ## Activate a $50/month allowance
 
-1. Deploy the API, dashboard and infrastructure using the [POC deployment guide](AZURE_BUDGET_LAB.md). Budget records share the existing configuration container.
+1. Deploy the API, dashboard and infrastructure using the [POC deployment guide](AZURE_BUDGET_LAB.md). Budget records are stored in PostgreSQL alongside the application configuration.
 2. Sign in with the existing `AIPolicy.Admin` role. Open **Budgets**, enter the Entra tenant UUID and select **Load budgets**.
 3. Add an allowance policy with amount **50**, period **Monthly**. Monthly resets occur on the first at 00:00 UTC. Weekly resets occur on Monday at 00:00 UTC. These are fixed calendar windows, not rolling windows or 30-day months.
 4. Assign the policy to a user's **object ID**, a group's **object ID**, or an application's **client ID**. Choose **Per member** to give each group member $50 independently. Choose **Shared by group** for one $50 pool. A user sharing the same policy through multiple per-member groups gets one allowance, not multiple allowances. If weekly and monthly policies both match, both must have funds.
@@ -27,29 +27,7 @@ Only APIM's managed identity should have `AIPolicy.Apim`. The backend trusts tha
 
 ## How spending is enforced
 
-```mermaid
-sequenceDiagram
-    participant C as Caller
-    participant G as APIM
-    participant E as Policy engine
-    participant D as PostgreSQL
-    participant M as Model
-    C->>G: Validated token + text chat + output cap
-    G->>E: Existing access/routing precheck
-    G->>E: Reserve funds for resolved deployment
-    E->>D: Atomic balances + reservation transaction
-    alt Insufficient allowance or unavailable authority
-        E-->>G: Reject
-        G-->>C: 429 / 403 / 503
-    else Reservation committed
-        E-->>G: Authorize one inference
-        G->>M: One bounded request
-        M-->>G: Response with usage
-        G->>E: Settle verified usage (retryable)
-        E->>D: Atomic debit + release unused reservation
-        G-->>C: Response + budget request/settlement headers
-    end
-```
+The [request-flow diagram](ARCHITECTURE.md#what-happens-for-one-request) shows authentication, reservation, inference, settlement and denial paths.
 
 The admission condition for **every matching bucket** is:
 
