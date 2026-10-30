@@ -12,6 +12,9 @@
   <PackageReference Include="Microsoft.Extensions.Configuration" />
   <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   <PackageReference Include="Microsoft.Extensions.Logging" />
+  <PackageReference Include="Npgsql" VersionOverride="8.0.9" />
+  <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+  <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 
   <PropertyGroup>
