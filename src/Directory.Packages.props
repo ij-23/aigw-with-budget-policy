@@ -35,7 +35,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.82.1" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.14.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="11.0.0" />
 
     <!-- OpenApi, Pinned to v2 until .NET 11 -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />
