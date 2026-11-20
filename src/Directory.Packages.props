@@ -10,7 +10,7 @@
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.4.6" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="17.0.0" />
 
     <!-- Azure -->
     <PackageVersion Include="Azure.Core" Version="1.53.0" />
