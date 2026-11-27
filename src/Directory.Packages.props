@@ -9,7 +9,7 @@
     <PackageVersion Include="Aspire.Hosting.Azure.KeyVault" Version="13.2.2" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
-    <PackageVersion Include="Npgsql" Version="10.0.1" />
+    <PackageVersion Include="Npgsql" Version="11.0.0" />
     <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.4.6" />
 
     <!-- Azure -->
